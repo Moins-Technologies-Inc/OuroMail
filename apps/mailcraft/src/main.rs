@@ -662,10 +662,10 @@ fn run_window(options: eframe::NativeOptions, creator: eframe::AppCreator<'_>, c
     {
         let _ = BROWSER.set(browser::Browser::new(std::sync::Arc::new(browser::Desktop)));
         let mut builder = winit::event_loop::EventLoop::<eframe::UserEvent>::with_user_event();
-        // winit 0.30's native Wayland set_visible is a no-op. X11 (including XWayland)
-        // lets a close really hide the window, removing its taskbar button. Both backends
-        // are already built; pure Wayland still runs, with close-to-tray unavailable.
-        if tray::prefer_x11(close_to_tray, tray::x11_reachable) {
+        // A close hides the window, removing its taskbar button, on X11 (including XWayland)
+        // and, with this build's winit (#1805), on Wayland: a Wayland session stays on Wayland,
+        // and X11 is taken for close-to-tray only outside one, when it answers.
+        if tray::prefer_x11(close_to_tray, tray::wayland_session(), tray::x11_reachable) {
             use winit::platform::x11::EventLoopBuilderExtX11;
             builder.with_x11();
         }

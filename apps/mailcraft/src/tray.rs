@@ -64,9 +64,19 @@ fn icons() -> Option<[egui::IconData; 2]> {
     Some([plain, badged])
 }
 
+/// Whether the window is to be an X11 client: only for Close to system tray, and only when X11
+/// answers and the session isn't a Wayland one. A Wayland window hides itself (#1805), so a
+/// Wayland session stays on Wayland and X11 is not even asked.
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-pub fn prefer_x11(close_to_tray: bool, reachable: impl FnOnce() -> bool) -> bool {
-    close_to_tray && reachable()
+pub fn prefer_x11(close_to_tray: bool, wayland: bool, reachable: impl FnOnce() -> bool) -> bool {
+    close_to_tray && !wayland && reachable()
+}
+
+/// Whether this is a Wayland session: winit takes Wayland first when it is.
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
+pub fn wayland_session() -> bool {
+    let set = |name: &str| std::env::var_os(name).is_some_and(|value| !value.is_empty());
+    set("WAYLAND_DISPLAY") || set("WAYLAND_SOCKET")
 }
 
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
@@ -89,12 +99,13 @@ pub fn x11_reachable() -> bool {
     rx.recv_timeout(std::time::Duration::from_secs(1)).unwrap_or(false)
 }
 
-/// Native Wayland cannot hide a winit 0.30 window. Never swallow a close there.
+/// Whether a close can hide the window: on X11, and on Wayland, where this build's winit hides
+/// a window by unmapping it (rust-windowing/winit#4590, #1805). Never swallow a close elsewhere.
 pub fn can_hide(cc: &eframe::CreationContext<'_>) -> bool {
     #[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly"))]
     {
         use winit::raw_window_handle::{HasDisplayHandle, RawDisplayHandle};
-        cc.display_handle().is_ok_and(|d| matches!(d.as_raw(), RawDisplayHandle::Xlib(_) | RawDisplayHandle::Xcb(_)))
+        cc.display_handle().is_ok_and(|d| matches!(d.as_raw(), RawDisplayHandle::Xlib(_) | RawDisplayHandle::Xcb(_) | RawDisplayHandle::Wayland(_)))
     }
     #[cfg(not(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly")))]
     {

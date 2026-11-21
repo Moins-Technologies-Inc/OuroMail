@@ -181,8 +181,11 @@ codegen-units = 16
 debug = 0
 
 [patch.crates-io]
-# winit 0.30.13 with two patches, each dropped when winit itself has it: an activation token that
-# names the latest click, which KWin needs before it brings the browser forward (#144); and
-# Wayland file drops plus the clipboard on winit's one data device (rust-windowing/winit#4729),
-# so that files dropped on a window are attached (#523); and reading HTML and pictures from it (#1217).
-winit = { git = "https://github.com/UCS-Care-Group/winit", rev = "1477b126a8c3d3d2add446c93492454ba833074d" }
+# The local OuroMail build's winit (ouromail/main only; a clone on this computer, never pushed):
+# upstream's winit 0.30.13 (1477b126: an activation token that names the latest click, #144; Wayland
+# file drops and the clipboard on winit's one data device, rust-windowing/winit#4729, #523, #1217)
+# with rust-windowing/winit#4590 (a Wayland window hidden and shown again by unmapping it) and three
+# changes so that eframe and AccessKit work with it, for close to system tray on Wayland (#1805): a
+# new window starts visible, its visibility is unknown until it is set, and a hidden window reports
+# itself occluded.
+winit = { git = "file:///home/donielmoins/dev/mailcraft-workspace/forks/winit", rev = "96c0d373e76bf5cae90dcfdbb64aec629ffbd68f" }

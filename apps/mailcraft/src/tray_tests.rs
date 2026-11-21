@@ -208,9 +208,17 @@ fn hidden_windows_remain_reachable_and_quit_keeps_using_the_apps_save_path() {
 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
 #[test]
 fn x11_is_only_probed_and_selected_when_the_option_is_on() {
-    assert!(!prefer_x11(false, || panic!("default startup must not probe X11")));
-    assert!(!prefer_x11(true, || false), "unreachable X11 leaves default backend selection alone");
-    assert!(prefer_x11(true, || true));
+    assert!(!prefer_x11(false, false, || panic!("default startup must not probe X11")));
+    assert!(!prefer_x11(true, false, || false), "unreachable X11 leaves default backend selection alone");
+    assert!(prefer_x11(true, false, || true));
+}
+
+#[cfg(any(target_os = "linux", target_os = "freebsd"))]
+#[test]
+fn a_wayland_session_stays_on_wayland_with_close_to_tray_on() {
+    // #1805: the window hides itself on Wayland, so X11 is neither probed nor selected.
+    assert!(!prefer_x11(true, true, || panic!("a Wayland session must not probe X11")));
+    assert!(!prefer_x11(false, true, || panic!("default startup must not probe X11")));
 }
 
 #[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly"))]
