@@ -152,6 +152,7 @@ pub fn object(id: &str) -> Option<Object> {
         | "ui.senderImages"
         | "ui.desktopAlerts"
         | "ui.closeToTray"
+        | "ui.reminderPopups"
         | "ui.repliesInWindow"
         | "ui.attachmentPictures"
         | "ui.swipeAction"

@@ -4643,6 +4643,12 @@ msgid "Display name"
 msgstr "Anzeigename"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Display reminder windows when calendar appointments are due. Disabling this option does not remove reminders from appointments."
+msgstr "Erinnerungsfenster anzeigen, wenn Kalendertermine fällig sind. Wenn diese Option ausgeschaltet ist, werden Erinnerungen nicht aus Terminen entfernt."
+
+#. interface
 #: crates/ui-egui/src/address_book.rs crates/ui-egui/src/check_names.rs
 #, fuzzy
 msgid "Distribution list"
@@ -14460,6 +14466,12 @@ msgstr ""
 msgid "Show as Conversations"
 msgstr "Als Unterhaltungen anzeigen"
 
+#. command label, interface
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Show calendar reminder pop-ups"
+msgstr "Kalender-Erinnerungsfenster anzeigen"
+
 #. android
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt
 #, fuzzy
@@ -20403,7 +20415,7 @@ msgid "`notice` is installsItself or didntStart"
 msgstr "`notice` ist installsItself oder didntStart"
 
 #. interface
-#: crates/ui-egui/src/updates.rs
+#: crates/ui-egui/src/lib.rs crates/ui-egui/src/updates.rs
 #, fuzzy
 msgid "`value` is true or false"
 msgstr "`value` ist true oder false"
