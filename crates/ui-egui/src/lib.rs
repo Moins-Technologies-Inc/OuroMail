@@ -277,9 +277,9 @@ mod shared_mailboxes;
 mod shared_permission;
 #[cfg(test)]
 mod shared_permission_tests;
-mod signature_import;
 #[cfg(test)]
 mod signature_close_tests;
+mod signature_import;
 #[cfg(test)]
 mod signature_link_tests;
 #[cfg(test)]
