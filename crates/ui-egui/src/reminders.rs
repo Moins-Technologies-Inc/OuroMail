@@ -25,6 +25,8 @@ use crate::{MailApp, icons, now_ms};
 const LOOK_EVERY: f64 = 15_000.0;
 /// How many dismissals are remembered; older ones are for events long past.
 const REMEMBERED: usize = 400;
+/// How many suppressed occurrence keys are kept: as many reminders as the engine can report due.
+const MOST_SUPPRESSED: usize = 100;
 
 #[derive(Default)]
 pub struct State {
@@ -62,6 +64,9 @@ pub(crate) struct Shared {
     rows: Vec<Row>,
     mail: Vec<MailRow>,
     twelve_hour: bool,
+    /// The window is wanted, and these rows are fit to paint. A pass queued before the switch
+    /// went off sees false and paints nothing of what it captured.
+    visible: bool,
     /// The window's title, and the one it was last given.
     title: String,
     titled: String,
@@ -121,6 +126,54 @@ fn key_of(r: &Reminder) -> String {
     key(r.event, &r.start.iso())
 }
 
+/// Whether this occurrence was already due while automatic pop-ups were off: it stays a real
+/// reminder (the manual window shows it) but is never announced or shown by itself.
+fn suppressed(app: &MailApp, r: &Reminder) -> bool {
+    let key = key_of(r);
+    app.ui.suppressed_calendar_reminder_popups.contains(&key)
+}
+
+/// The calendar's reminders the window shows: everything the owner asked for by hand, otherwise
+/// only what is due, unsuppressed and with pop-ups on.
+fn visible(app: &MailApp) -> Vec<Reminder> {
+    if app.reminders.asked_for {
+        return app.reminders.showing.clone();
+    }
+    if !app.ui.show_calendar_reminder_popups {
+        return Vec::new();
+    }
+    app.reminders.showing.iter().filter(|r| !suppressed(app, r)).cloned().collect()
+}
+
+/// Whether the window (and its paint pass) is wanted now. The switch is for the calendar's
+/// reminders: a message's follow-up reminder (#948) still brings the window up by itself.
+fn presentation_wanted(app: &MailApp) -> bool {
+    app.reminders.asked_for
+        || !app.reminders.mail.is_empty()
+        || (app.ui.show_calendar_reminder_popups && app.reminders.showing.iter().any(|r| !suppressed(app, r)))
+}
+
+/// Suppress every occurrence due now, keeping only them and the engine's bound. This is what a
+/// switch off and a switch on both do, before anything could be announced.
+fn fill_suppressed(app: &mut MailApp, due: &[String]) {
+    let list = &mut app.ui.suppressed_calendar_reminder_popups;
+    list.clear();
+    for key in due.iter().take(MOST_SUPPRESSED) {
+        if !list.contains(key) {
+            list.push(key.clone());
+        }
+    }
+}
+
+/// Keep only suppressed occurrences that are still due, and never more than the engine can
+/// report due at once.
+fn retain_suppressed(app: &mut MailApp, due: &[String]) {
+    let list = &mut app.ui.suppressed_calendar_reminder_popups;
+    list.retain(|key| due.contains(key));
+    let extra = list.len().saturating_sub(MOST_SUPPRESSED);
+    list.drain(..extra);
+}
+
 /// `in 10 minutes`, `now`, `25 minutes ago`, `in 2 hours`, `3 days ago`.
 pub(crate) fn when(minutes: i64) -> String {
     let unit = match minutes.unsigned_abs() {
@@ -133,7 +186,9 @@ pub(crate) fn when(minutes: i64) -> String {
 }
 
 /// Work out what is due, every few seconds and whenever the mailbox changed; ask for attention
-/// when something new is.
+/// when something new is. With automatic pop-ups off, the calendar's reminders that are due are
+/// suppressed (and recorded as told) so that turning them back on cannot replay a backlog; none
+/// of them is announced or shown. A message's follow-up reminder is announced either way.
 pub fn tick(app: &mut MailApp, ctx: &egui::Context) {
     let now = now_ms();
     let rev = app.session.rev();
@@ -142,11 +197,23 @@ pub fn tick(app: &mut MailApp, ctx: &egui::Context) {
     }
     app.reminders.looked = now;
     app.reminders.looked_rev = rev;
-    refresh(app);
+    let due = refresh(app);
     let mut fresh = Vec::new();
-    for r in &app.reminders.showing {
-        if app.reminders.announced.insert(key_of(r)) {
-            fresh.push(r.clone());
+    if !app.ui.show_calendar_reminder_popups {
+        // What fell due while off is suppressed now, so it is not a backlog when turned on.
+        fill_suppressed(app, &due);
+        for r in &app.reminders.showing {
+            app.reminders.announced.insert(key_of(r));
+        }
+    } else {
+        retain_suppressed(app, &due);
+        for r in &app.reminders.showing {
+            if suppressed(app, r) {
+                continue;
+            }
+            if app.reminders.announced.insert(key_of(r)) {
+                fresh.push(r.clone());
+            }
         }
     }
     let fresh_mail: Vec<MailRow> = app.reminders.mail.iter().filter(|m| app.reminders.announced.insert(mail_key(m.id, m.at))).cloned().collect();
@@ -161,14 +228,17 @@ pub fn tick(app: &mut MailApp, ctx: &egui::Context) {
     }
 }
 
-/// What is due, less what was dismissed or is put off.
-fn refresh(app: &mut MailApp) {
+/// What is due, less what was dismissed or is put off; answers the occurrence keys of every
+/// calendar reminder the engine reports due, dismissed or not, for the suppression list.
+fn refresh(app: &mut MailApp) -> Vec<String> {
     let now = now_ms();
     app.reminders.snoozed.retain(|_, until| *until > now);
     let due = due_reminders(&app.session, app.session.local_now());
+    let keys = due.iter().map(key_of).collect();
     app.reminders.showing =
         due.into_iter().filter(|r| !app.ui.dismissed_reminders.contains(&key_of(r)) && !app.reminders.snoozed.contains_key(&key_of(r))).collect();
     app.reminders.mail = mail_rows(app);
+    keys
 }
 
 /// What a follow-up reminder is known by in [`State::announced`].
@@ -228,7 +298,7 @@ pub fn dismiss(app: &mut MailApp, one: Option<(u64, &str)>) -> usize {
     }
     let extra = app.ui.dismissed_reminders.len().saturating_sub(REMEMBERED);
     app.ui.dismissed_reminders.drain(..extra);
-    refresh(app);
+    let _ = refresh(app);
     if !anything(app) {
         app.reminders.asked_for = false;
     }
@@ -260,9 +330,37 @@ pub fn snooze(app: &mut MailApp, one: Option<(u64, &str)>, minutes: u64) -> usiz
             }
         }
     }
-    refresh(app);
+    let _ = refresh(app);
     app.reminders.asked_for = false;
     n
+}
+
+/// Turn the automatic presentation of calendar reminders on or off. The occurrences due at the
+/// moment of the change are suppressed either way, before anything could announce them, so a
+/// backlog is never replayed; turning it off also invalidates any automatic window pass or queued
+/// action that has not run yet. A manual View › Reminders Window is never affected, nor are the
+/// follow-up reminders of messages.
+pub fn set_popups(app: &mut MailApp, on: bool) {
+    if app.ui.show_calendar_reminder_popups == on {
+        return;
+    }
+    let due = refresh(app);
+    app.ui.show_calendar_reminder_popups = on;
+    fill_suppressed(app, &due);
+    if !on {
+        for r in &app.reminders.showing {
+            app.reminders.announced.insert(key_of(r));
+        }
+    }
+    let wanted = presentation_wanted(app);
+    let mut shared = lock(&app.reminders.shared);
+    shared.visible = wanted;
+    if !wanted {
+        shared.rows.clear();
+        shared.mail.clear();
+        shared.hits.clear();
+        shared.actions.clear();
+    }
 }
 
 fn viewport() -> egui::ViewportId {
@@ -280,7 +378,8 @@ pub(crate) fn embedded_layer() -> egui::LayerId {
 pub fn show(app: &mut MailApp, ctx: &egui::Context) {
     app.reminders.passes = app.reminders.passes.wrapping_add(1);
     app.reminders.ending = None;
-    let wanted = anything(app) || app.reminders.asked_for;
+    publish(app, ctx);
+    let wanted = presentation_wanted(app);
     // A window minimized because the main window had no passes ([`carry_out`]) is let go in
     // this pass and made afresh in the next, so that it comes back in front.
     if std::mem::take(&mut app.reminders.minimized) {
@@ -294,7 +393,6 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
     if !wanted {
         return;
     }
-    publish(app, ctx);
     let shared = Arc::clone(&app.reminders.shared);
     let (title, rows) = {
         let mut s = lock(&shared);
@@ -320,7 +418,7 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
 /// window is carried out, and what it shows brought up to date.
 pub fn carry_out(app: &mut MailApp, ctx: &egui::Context) {
     apply(app, ctx);
-    let wanted = anything(app) || app.reminders.asked_for;
+    let wanted = presentation_wanted(app);
     if wanted || !app.reminders.on_screen {
         app.reminders.ending = None;
         return;
@@ -342,6 +440,48 @@ pub fn carry_out(app: &mut MailApp, ctx: &egui::Context) {
     }
 }
 
+/// A window's bulk button applies only to the rows the owner can see. Keep the existing single
+/// command for the usual case; only a window excluding a suppressed backlog needs named rows
+/// (and then the messages' follow-up reminders it shows are put off or dismissed as
+/// [`dismiss`] and [`snooze`] do for all).
+fn act_on_visible(app: &mut MailApp, minutes: Option<u64>) {
+    let shown = visible(app);
+    let command = if minutes.is_some() { "ui.snoozeReminders" } else { "ui.dismissReminder" };
+    let mut params = serde_json::Map::new();
+    if let Some(minutes) = minutes {
+        params.insert("minutes".into(), json!(minutes));
+    }
+    if shown.len() == app.reminders.showing.len() {
+        params.insert("all".into(), json!(true));
+        let _ = app.execute(command, serde_json::Value::Object(params));
+        return;
+    }
+    for reminder in shown {
+        params.insert("event".into(), json!(reminder.event));
+        params.insert("occurrence".into(), json!(reminder.start.iso()));
+        let _ = app.execute(command, serde_json::Value::Object(params.clone()));
+    }
+    let rows = app.reminders.mail.clone();
+    let ids: Vec<u64> = rows.iter().map(|m| m.id).collect();
+    // Never for an agent (#948), as in [`dismiss`] and [`snooze`].
+    if ids.is_empty() || app.session.agent.is_some() {
+        return;
+    }
+    match minutes {
+        Some(minutes) => {
+            if app.execute("mail.postponeReminder", json!({"ids": ids, "minutes": minutes.clamp(1, 10_080)})).is_ok() {
+                for m in &rows {
+                    app.reminders.announced.remove(&mail_key(m.id, m.at));
+                }
+            }
+        }
+        None => {
+            let _ = app.execute("mail.dismissReminder", json!({"ids": ids}));
+        }
+    }
+    let _ = refresh(app);
+}
+
 /// Carry out what was done in the window, and give it what it is to show.
 fn apply(app: &mut MailApp, ctx: &egui::Context) {
     let actions = std::mem::take(&mut lock(&app.reminders.shared).actions);
@@ -351,15 +491,15 @@ fn apply(app: &mut MailApp, ctx: &egui::Context) {
                 let _ = app.execute("ui.dismissReminder", json!({"event": event, "occurrence": occurrence}));
             }
             Action::DismissAll => {
-                let _ = app.execute("ui.dismissReminder", json!({"all": true}));
+                act_on_visible(app, None);
             }
             Action::Snooze(minutes) => {
-                let _ = app.execute("ui.snoozeReminders", json!({"minutes": minutes}));
+                act_on_visible(app, Some(minutes));
             }
             Action::Open(event, start) => open(app, event, start),
             Action::DismissMail(id) => {
                 let _ = app.execute("mail.dismissReminder", json!({"ids": [id]}));
-                refresh(app);
+                let _ = refresh(app);
                 if !anything(app) {
                     app.reminders.asked_for = false;
                 }
@@ -373,10 +513,10 @@ fn apply(app: &mut MailApp, ctx: &egui::Context) {
             // Closing the window puts what is showing off for a while; it comes back, as a
             // reminder should.
             Action::Close => {
-                if !anything(app) {
+                if visible(app).is_empty() && app.reminders.mail.is_empty() {
                     app.reminders.asked_for = false;
                 } else {
-                    let _ = app.execute("ui.snoozeReminders", json!({"minutes": 5}));
+                    act_on_visible(app, Some(5));
                 }
             }
         }
@@ -386,22 +526,28 @@ fn apply(app: &mut MailApp, ctx: &egui::Context) {
 
 /// What the window shows, from what is due; its pass is asked for when that changed.
 fn publish(app: &MailApp, ctx: &egui::Context) {
-    let rows: Vec<Row> = app
-        .reminders
-        .showing
-        .iter()
-        .map(|r| Row {
-            reminder: r.clone(),
-            // An online meeting that has a link to join by gets a Join button beside Dismiss.
-            join: app.session.mailbox.event(r.event).and_then(|e| e.join_link()).and_then(mailcraft_model::OnlineMeeting::clean_link),
-        })
-        .collect();
+    let wanted = presentation_wanted(app);
+    let rows: Vec<Row> = if wanted {
+        visible(app)
+            .into_iter()
+            .map(|r| {
+                // An online meeting that has a link to join by gets a Join button beside Dismiss.
+                let join = app.session.mailbox.event(r.event).and_then(|e| e.join_link()).and_then(mailcraft_model::OnlineMeeting::clean_link);
+                Row { reminder: r, join }
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
     let twelve_hour = app.session.prefs.twelve_hour;
-    let mail = app.reminders.mail.clone();
+    let mail = if wanted { app.reminders.mail.clone() } else { Vec::new() };
     let title = tln!(rows.len() + mail.len(), "{n} Reminder", "{n} Reminders");
     let mut s = lock(&app.reminders.shared);
-    if s.rows != rows || s.mail != mail || s.twelve_hour != twelve_hour || s.title != title {
-        (s.rows, s.mail, s.twelve_hour, s.title) = (rows, mail, twelve_hour, title);
+    if s.rows != rows || s.mail != mail || s.twelve_hour != twelve_hour || s.title != title || s.visible != wanted {
+        (s.rows, s.mail, s.twelve_hour, s.title, s.visible) = (rows, mail, twelve_hour, title, wanted);
+        if !wanted {
+            s.hits.clear();
+        }
         drop(s);
         ctx.request_repaint_of(viewport());
     }
@@ -413,6 +559,12 @@ fn paint(ui: &mut egui::Ui, class: egui::ViewportClass, shared: &Mutex<Shared>) 
     let ctx = ui.ctx().clone();
     let t = Tokens::get(&ctx);
     let mut s = lock(shared);
+    // A pass queued before the switch went off (or before the last reminder went) must not paint
+    // what it captured, nor leave its hit areas behind.
+    if !s.visible {
+        s.hits.clear();
+        return;
+    }
     let (rows, twelve, mail) = (s.rows.clone(), s.twelve_hour, s.mail.clone());
     let mut done = Vec::new();
     let mut hits = Vec::new();
