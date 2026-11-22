@@ -10726,11 +10726,6 @@ msgid "On"
 msgstr "Am"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
-msgstr "Starten Sie MailCraft unter Wayland nach dem Aktivieren dieser Option neu. Ein erreichbarer X11-/XWayland-Server und ein Infobereich sind erforderlich."
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "On the"
 msgstr "Am"
@@ -11384,6 +11379,12 @@ msgstr "Sonst werden sie mit ihren Namen angezeigt. In Junk werden sie immer mit
 #: crates/ui-egui/src/backstage.rs
 msgid "Otherwise they start in the reading pane, where Pop Out moves them into a window of their own."
 msgstr "Andernfalls werden diese zunächst im Lesebereich geöffnet. Mit „In neuem Fenster öffnen“ können Sie diese in ein eigenes Fenster verschieben."
+
+#. interface, name
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/theme/accent.rs
+#, fuzzy
+msgid "Ouro"
+msgstr "Ouro"
 
 #. name
 #: crates/model/src/calendar.rs
@@ -12809,6 +12810,12 @@ msgstr "Anfrage in Ihrem Postausgang."
 #, fuzzy
 msgid "Required"
 msgstr "Erforderlich"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Requires a system tray."
+msgstr "Erfordert einen Infobereich."
 
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
@@ -25243,6 +25250,9 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Zeilen"
+
+#~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
+#~ msgstr "Starten Sie MailCraft unter Wayland nach dem Aktivieren dieser Option neu. Ein erreichbarer X11-/XWayland-Server und ein Infobereich sind erforderlich."
 
 #~ msgid "Sent as written, without anything that runs or tracks. Pictures come from their web address, and recipients' programs decide whether to load them. A message you write shows a simpler copy of this signature; if you edit it there, that copy is sent instead."
 #~ msgstr "Wird unverändert versendet, ohne ausführbare oder nachverfolgende Elemente. Die Bilder werden über ihre Webadresse bereitgestellt und das Empfänger E-Mail-Programm entscheiden, ob die Bilder geladen werden. Beim Verfassen einer Nachricht wird eine vereinfachte Version dieser Signatur angezeigt. Wenn Sie diese dort bearbeiten, wird stattdessen diese Version versendet."

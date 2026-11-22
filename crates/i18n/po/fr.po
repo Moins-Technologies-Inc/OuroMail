@@ -11375,12 +11375,6 @@ msgid "On"
 msgstr "Le jour"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
-msgstr "Sous Wayland, redémarrez MailCraft après avoir activé cette option. Un serveur X11/XWayland accessible et une zone de notification sont nécessaires."
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "On the"
@@ -12083,6 +12077,12 @@ msgstr "Sinon, elles sont affichées par leur nom. Dans Indésirable, elles sont
 #, fuzzy
 msgid "Otherwise they start in the reading pane, where Pop Out moves them into a window of their own."
 msgstr "Sinon, ils s'ouvrent dans le volet de lecture, d'où Détacher les déplace dans une fenêtre à part."
+
+#. interface, name
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/theme/accent.rs
+#, fuzzy
+msgid "Ouro"
+msgstr "Ouro"
 
 #. name
 #: crates/model/src/calendar.rs
@@ -13589,6 +13589,12 @@ msgstr "Demande dans votre Boîte d'envoi."
 #, fuzzy
 msgid "Required"
 msgstr "Obligatoire"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Requires a system tray."
+msgstr "Nécessite une zone de notification."
 
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
@@ -26698,6 +26704,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Lignes"
+
+#, fuzzy
+#~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
+#~ msgstr "Sous Wayland, redémarrez MailCraft après avoir activé cette option. Un serveur X11/XWayland accessible et une zone de notification sont nécessaires."
 
 #, fuzzy
 #~ msgid "Sent as written, without anything that runs or tracks. Pictures come from their web address, and recipients' programs decide whether to load them. A message you write shows a simpler copy of this signature; if you edit it there, that copy is sent instead."

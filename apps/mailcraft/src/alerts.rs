@@ -121,7 +121,7 @@ mod freedesktop {
     const SERVICE: &str = "org.freedesktop.Notifications";
     const PATH: &str = "/org/freedesktop/Notifications";
     /// The desktop entry the service finds the program's name and icon in.
-    const DESKTOP_ENTRY: &str = "io.github.billsecond.mailcraft";
+    const DESKTOP_ENTRY: &str = "tech.moins.ouromail";
     const CALL_TIMEOUT: Duration = Duration::from_secs(3);
     /// How many alerts may wait to go out; more are dropped (a flood is one alert anyway).
     const WAITING: usize = 16;
@@ -206,7 +206,7 @@ mod freedesktop {
             // The default action is a click on the notification itself.
             let offered: Vec<&str> = if actions { vec!["default", "Open"] } else { Vec::new() };
             let hints: HashMap<&str, Value<'_>> = hints(alert.kind).into_iter().map(|(name, value)| (name, Value::from(value))).collect();
-            let sent: zbus::Result<u32> = proxy.call("Notify", &("MailCraft", 0u32, "", alert.title.as_str(), body.as_str(), offered, hints, -1i32));
+            let sent: zbus::Result<u32> = proxy.call("Notify", &("OuroMail", 0u32, "", alert.title.as_str(), body.as_str(), offered, hints, -1i32));
             match sent {
                 Ok(id) => {
                     if let Ok(mut shown) = shown.lock() {

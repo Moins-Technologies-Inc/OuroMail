@@ -9474,11 +9474,6 @@ msgid "On"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
-msgstr ""
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 msgid "On the"
 msgstr ""
@@ -10063,6 +10058,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/backstage.rs
 msgid "Otherwise they start in the reading pane, where Pop Out moves them into a window of their own."
+msgstr ""
+
+#. interface, name
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/theme/accent.rs
+msgid "Ouro"
 msgstr ""
 
 #. name
@@ -11320,6 +11320,11 @@ msgstr ""
 #. interface
 #: crates/ui-egui/src/forms.rs crates/ui-egui/src/meeting_dialogs/share.rs crates/ui-egui/src/reading/invitation.rs crates/ui-egui/src/scheduling.rs
 msgid "Required"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+msgid "Requires a system tray."
 msgstr ""
 
 #. command label, interface, ribbon

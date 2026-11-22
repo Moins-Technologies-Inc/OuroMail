@@ -85,6 +85,7 @@ mod listed_twice_flow;
 mod logging;
 #[cfg(target_os = "macos")]
 mod menubar;
+mod migrate_settings;
 mod opened_files;
 #[cfg(test)]
 mod opened_flow;
@@ -678,7 +679,7 @@ fn run_window(options: eframe::NativeOptions, creator: eframe::AppCreator<'_>, c
             seen.store(true, std::sync::atomic::Ordering::Relaxed);
             creator(cc)
         });
-        let mut app = WithTokens(eframe::create_native("MailCraft", options, creator, &event_loop));
+        let mut app = WithTokens(eframe::create_native("OuroMail", options, creator, &event_loop));
         event_loop.run_app(&mut app)?;
         if started.load(std::sync::atomic::Ordering::Relaxed) {
             Ok(())
@@ -689,7 +690,7 @@ fn run_window(options: eframe::NativeOptions, creator: eframe::AppCreator<'_>, c
     #[cfg(not(any(target_os = "linux", target_os = "freebsd")))]
     {
         let _ = close_to_tray;
-        eframe::run_native("MailCraft", options, creator)
+        eframe::run_native("OuroMail", options, creator)
     }
 }
 
@@ -1426,16 +1427,24 @@ fn update_download(
     })
 }
 
-/// The application id of every window (by which Wayland desktops find the icon).
-const APP_ID: &str = "io.github.billsecond.mailcraft";
+/// The application id of every window (by which Wayland desktops find the icon): OuroMail's
+/// (`packaging/linux/tech.moins.ouromail.desktop`).
+const APP_ID: &str = "tech.moins.ouromail";
 
-/// Window, Dock and taskbar icon.
+/// Window, Dock and taskbar icon: OuroMail's (`assets/app-icon`, attributed in `ATTRIBUTION.md`).
 fn app_icon() -> Option<egui::IconData> {
     #[cfg(target_os = "macos")]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/mailcraft-macos-512.png");
+    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/512x512/apps/tech.moins.ouromail.png");
     #[cfg(not(target_os = "macos"))]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/io.github.billsecond.mailcraft.png");
+    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/tech.moins.ouromail.png");
     eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("app icon: {e}")).ok()
+}
+
+/// The system tray's icon: OuroMail's bolder drawing for small sizes, 64 pixels, which the
+/// unread badge is drawn into (`tray`) and the tray scales down to its own 16 to 32.
+pub(crate) fn tray_icon() -> Option<egui::IconData> {
+    let png: &[u8] = include_bytes!("../../../assets/app-icon/ouromail-tray-64.png");
+    eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("tray icon: {e}")).ok()
 }
 
 /// The commit the build came from (short), or `dev`.
@@ -1552,6 +1561,13 @@ fn main() -> eframe::Result {
             _ => files.push(a),
         }
     }
+    // OuroMail's own settings folder, at its first start: what MailCraft kept is copied into it
+    // once (`migrate_settings`), MailCraft's folder only read. Never for the sample, nor for a run
+    // that keeps no settings; a `--mailbox` run keeps its settings, logs and keys in that folder
+    // all the same, so it takes part.
+    if !sample && prefs_enabled() {
+        migrate_settings::at_start();
+    }
     // A copy that updates itself: a new version waits for the one it replaced to have gone, and
     // finds out what came of the last update (`self_update`); a start that lasts a minute worked.
     let updates = HostUpdates::of_this_copy();
@@ -1634,7 +1650,7 @@ fn main() -> eframe::Result {
     }
     let mut options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("MailCraft")
+            .with_title("OuroMail")
             .with_app_id(APP_ID)
             .with_inner_size([1440.0, 920.0])
             .with_min_inner_size([760.0, 480.0])
@@ -1817,7 +1833,7 @@ fn main() -> eframe::Result {
                 Ok(bar) => Some(bar),
                 Err(e) => {
                     log::warn!("the menu bar couldn't be set up: {e}");
-                    if let Err(e) = quit_macos::install_app_menu(&cc.egui_ctx, "MailCraft") {
+                    if let Err(e) = quit_macos::install_app_menu(&cc.egui_ctx, "OuroMail") {
                         log::warn!("the app menu couldn't be set up, so Quit won't ask about unsaved work: {e}");
                     }
                     None

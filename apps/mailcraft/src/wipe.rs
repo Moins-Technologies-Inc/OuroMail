@@ -5,8 +5,8 @@
 //! entries first (`mailcraft_ui_egui::data_removal`); this is the host's part, the folders.
 //!
 //! ```text
-//! <settings>/                   (mailcraft_control_key::settings_dir: %APPDATA%\MailCraft,
-//!                                ~/Library/Application Support/MailCraft, ~/.config/mailcraft)
+//! <settings>/                   (mailcraft_control_key::settings_dir: %APPDATA%\OuroMail,
+//!                                ~/Library/Application Support/OuroMail, ~/.config/ouromail)
 //!     mailbox.mailcraft…        the mailbox, its content folder, its word index
 //!     ui.json, logs/, pictures/ the settings, the logs, the downloaded pictures
 //!     updates/ …                the update's downloads and the version kept to go back to
@@ -23,7 +23,7 @@
 //!   message, not a setting. A mailbox file the owner keeps elsewhere (File › Open, `--mailbox`)
 //!   is theirs: it is left, and said so.
 //! - **Each root is checked before anything in it goes:** absolute, called what it must be
-//!   called (`mailcraft`/`MailCraft`, `Attachments`), a real folder and not a link. A root that
+//!   called (`ouromail`/`OuroMail`, `MailCraft`, `Attachments`), a real folder and not a link. A root that
 //!   fails any of this is reported and left entirely alone.
 //! - **Never through a link.** Every entry is looked at with `symlink_metadata`; a link (file or
 //!   folder) is itself unlinked and what it points at is never opened, listed or removed. Paths
@@ -79,7 +79,7 @@ impl Roots {
         if let Some(settings) = mailcraft_control_key::settings_dir() {
             roots.list.push(Root {
                 path: settings.clone(),
-                name: if cfg!(any(windows, target_os = "macos")) { "MailCraft" } else { "mailcraft" },
+                name: if cfg!(any(windows, target_os = "macos")) { "OuroMail" } else { "ouromail" },
                 itself: true,
             });
             roots.settings = Some(settings);

@@ -1,11 +1,11 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! The desktop's icons of MailCraft in the owner's own data folder, kept as new as the program.
+//! The desktop's icons of OuroMail in the owner's own data folder, kept as new as the program.
 //!
 //! A copy put in place by hand (an AppImage linked from `~/.local/bin`, say) often comes with a
 //! launcher and icons written into the owner's own data folder (`$XDG_DATA_HOME`, else
-//! `~/.local/share`): `applications/io.github.billsecond.mailcraft.desktop` and
-//! `icons/hicolor/<size>/apps/io.github.billsecond.mailcraft.png`, where the desktop's panel looks
+//! `~/.local/share`): `applications/tech.moins.ouromail.desktop` and
+//! `icons/hicolor/<size>/apps/tech.moins.ouromail.png`, where the desktop's panel looks
 //! for the icon of the app id. An update replaces the program and not those, so the panel went
 //! on showing the old icon. At every start ([`refresh`]), when the launcher is there and an icon
 //! there differs from the one this program carries, each icon file that is there is written anew
@@ -19,21 +19,20 @@ use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Component, Path, PathBuf};
 
-/// The application id the desktop knows MailCraft by.
-const APP_ID: &str = "io.github.billsecond.mailcraft";
+/// The application id the desktop knows OuroMail by.
+const APP_ID: &str = "tech.moins.ouromail";
 
 /// The icons this program carries: the folder under `icons/hicolor` each goes in, its extension
-/// and its bytes.
-pub(crate) const ICONS: [(&str, &str, &[u8]); 9] = [
-    ("16x16", "png", include_bytes!("../../../assets/app-icon/hicolor/16x16/apps/io.github.billsecond.mailcraft.png")),
-    ("24x24", "png", include_bytes!("../../../assets/app-icon/hicolor/24x24/apps/io.github.billsecond.mailcraft.png")),
-    ("32x32", "png", include_bytes!("../../../assets/app-icon/hicolor/32x32/apps/io.github.billsecond.mailcraft.png")),
-    ("48x48", "png", include_bytes!("../../../assets/app-icon/hicolor/48x48/apps/io.github.billsecond.mailcraft.png")),
-    ("64x64", "png", include_bytes!("../../../assets/app-icon/hicolor/64x64/apps/io.github.billsecond.mailcraft.png")),
-    ("128x128", "png", include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/io.github.billsecond.mailcraft.png")),
-    ("256x256", "png", include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/io.github.billsecond.mailcraft.png")),
-    ("512x512", "png", include_bytes!("../../../assets/app-icon/hicolor/512x512/apps/io.github.billsecond.mailcraft.png")),
-    ("scalable", "svg", include_bytes!("../../../assets/app-icon/hicolor/scalable/apps/io.github.billsecond.mailcraft.svg")),
+/// and its bytes. PNG only: OuroMail has no scalable icon.
+pub(crate) const ICONS: [(&str, &str, &[u8]); 8] = [
+    ("16x16", "png", include_bytes!("../../../assets/app-icon/hicolor/16x16/apps/tech.moins.ouromail.png")),
+    ("24x24", "png", include_bytes!("../../../assets/app-icon/hicolor/24x24/apps/tech.moins.ouromail.png")),
+    ("32x32", "png", include_bytes!("../../../assets/app-icon/hicolor/32x32/apps/tech.moins.ouromail.png")),
+    ("48x48", "png", include_bytes!("../../../assets/app-icon/hicolor/48x48/apps/tech.moins.ouromail.png")),
+    ("64x64", "png", include_bytes!("../../../assets/app-icon/hicolor/64x64/apps/tech.moins.ouromail.png")),
+    ("128x128", "png", include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/tech.moins.ouromail.png")),
+    ("256x256", "png", include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/tech.moins.ouromail.png")),
+    ("512x512", "png", include_bytes!("../../../assets/app-icon/hicolor/512x512/apps/tech.moins.ouromail.png")),
 ];
 
 /// The owner's own data folder: `$XDG_DATA_HOME` when it is an absolute path (as the XDG Base

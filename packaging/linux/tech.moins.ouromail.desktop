@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=OuroMail
+GenericName=Mail Client
+Comment=Read and write mail, keep a calendar, contacts and tasks
+Exec=ouromail %U
+TryExec=ouromail
+Icon=tech.moins.ouromail
+Terminal=false
+StartupNotify=true
+StartupWMClass=tech.moins.ouromail
+Categories=Office;Email;Calendar;ContactManagement;
+Keywords=mail;email;e-mail;inbox;calendar;contacts;tasks;imap;smtp;
+MimeType=message/rfc822;application/mbox;text/calendar;text/vcard;x-scheme-handler/mailto;

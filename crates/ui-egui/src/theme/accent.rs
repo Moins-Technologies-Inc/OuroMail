@@ -20,7 +20,10 @@ fn hex(v: u32) -> Color32 {
 /// The accent of a theme: the one colour that marks what is chosen, unread or in view.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Accent {
+    /// The Ouro theme's own accent, the default: ink on a light window, the brand yellow on a
+    /// dark one, exactly as [`Tokens::light`] and [`Tokens::dark`] have them.
     #[default]
+    Ouro,
     Blue,
     Teal,
     Violet,
@@ -35,11 +38,12 @@ pub const DEFAULT_CUSTOM_COLOR: Color32 = Color32::from_rgb(0xC2, 0x18, 0x5B);
 
 impl Accent {
     /// In picker order.
-    pub const ALL: [Accent; 5] = [Accent::Blue, Accent::Teal, Accent::Violet, Accent::Graphite, Accent::Custom];
+    pub const ALL: [Accent; 6] = [Accent::Ouro, Accent::Blue, Accent::Teal, Accent::Violet, Accent::Graphite, Accent::Custom];
 
     /// The value used in `ui.json` and by the `ui.accent` command.
     pub fn code(self) -> &'static str {
         match self {
+            Accent::Ouro => "ouro",
             Accent::Blue => "blue",
             Accent::Teal => "teal",
             Accent::Violet => "violet",
@@ -55,6 +59,7 @@ impl Accent {
     /// The English name (translated with `tl!` where shown).
     pub fn label(self) -> &'static str {
         match self {
+            Accent::Ouro => "Ouro",
             Accent::Blue => "Blue",
             Accent::Teal => "Teal",
             Accent::Violet => "Violet",
@@ -77,6 +82,8 @@ impl Accent {
             today: hex(today),
         };
         match (self, dark, high_contrast) {
+            // The Ouro theme's own, in high contrast too: ink and yellow already pass 7:1 there.
+            (Accent::Ouro, dark, _) => ouro_ink(dark),
             (Accent::Blue, false, false) => row(0x0F68F0, 0x0634C4, 0xFFFFFF, 0xE3EDFF, 0x0634C4, 0xEEF4FF, 0xEAF1FF),
             (Accent::Teal, false, false) => row(0x0B7F74, 0x085F57, 0xFFFFFF, 0xDCF2EF, 0x085F57, 0xECF8F6, 0xE6F6F3),
             (Accent::Violet, false, false) => row(0x6A4CF0, 0x4A2FC4, 0xFFFFFF, 0xECE8FF, 0x4A2FC4, 0xF3F0FF, 0xF0ECFF),
@@ -99,6 +106,21 @@ impl Accent {
                 custom_ink(custom.unwrap_or(DEFAULT_CUSTOM_COLOR), &base)
             }
         }
+    }
+}
+
+/// The Ouro accent's colours: those of [`Tokens::light`] and [`Tokens::dark`] themselves, so that
+/// the default accent leaves the palette exactly as it is.
+pub(crate) fn ouro_ink(dark: bool) -> AccentInk {
+    let t = if dark { Tokens::dark() } else { Tokens::light() };
+    AccentInk {
+        accent: t.accent,
+        text: t.accent_text,
+        on_accent: t.on_accent,
+        soft: t.accent_soft,
+        soft_text: t.accent_soft_text,
+        selection: t.selection,
+        today: t.today,
     }
 }
 
@@ -420,7 +442,8 @@ impl Tokens {
             self.flagged_row = hex(0x3E282D);
             self.overdue = hex(0xFFB3B3);
             self.off_hours = hex(0x101011);
-            self.find_highlight = Color32::from_rgba_unmultiplied(0xE0, 0xBC, 0x00, 0xA0);
+            self.find_highlight = hex(0xFFDD00);
+            self.find_ink = hex(0x171918);
             self.red = hex(0xFF8A8A);
             self.green = hex(0x7FE0A8);
             self.orange = hex(0xFFB870);
@@ -477,7 +500,8 @@ impl Tokens {
             self.flagged_row = hex(0xFCE8EB);
             self.overdue = hex(0x8A140C);
             self.off_hours = hex(0xF0F2F6);
-            self.find_highlight = Color32::from_rgba_unmultiplied(0xFF, 0xD0, 0x00, 0xB0);
+            self.find_highlight = hex(0xFFDD00);
+            self.find_ink = hex(0x171918);
             self.red = hex(0xA31B1B);
             self.green = hex(0x105A33);
             self.orange = hex(0x7A3A00);

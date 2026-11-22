@@ -617,7 +617,7 @@ fn row(ui: &mut Ui, label: &str, add: impl FnOnce(&mut Ui)) {
     });
 }
 
-/// The accent choices: five swatches — four named and one of the owner's own colour, which opens a
+/// The accent choices: six swatches — five named and one of the owner's own colour, which opens a
 /// picker under it — the one in use marked with a ring and a tick, each reachable and pressable
 /// from the keyboard.
 fn accent_swatches(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
@@ -625,6 +625,7 @@ fn accent_swatches(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
     let custom = app.ui.custom_accent;
     for (i, a) in crate::theme::Accent::ALL.into_iter().enumerate() {
         let name = match a {
+            crate::theme::Accent::Ouro => tl!("Ouro"),
             crate::theme::Accent::Blue => tl!("Blue"),
             crate::theme::Accent::Teal => tl!("Teal"),
             crate::theme::Accent::Violet => tl!("Violet"),
@@ -734,7 +735,7 @@ fn options(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
             let _ = app.run("ui.closeToTray", json!({"value": on}));
         }
         #[cfg(any(target_os = "linux", target_os = "freebsd"))]
-        ui.label(tl!("On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."));
+        ui.label(tl!("Requires a system tray."));
     }
     row(ui, tl!("Interface theme"), |ui| {
         let cur = app.ui.theme;

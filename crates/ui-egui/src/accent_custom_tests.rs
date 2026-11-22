@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: MailCraft contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! File › Options › General › Accent: the fifth swatch, "Custom color", its picker with the hex
+//! File › Options › General › Accent: the last swatch, "Custom color", its picker with the hex
 //! field, and choosing another accent again (#1737).
 
 use egui::accesskit::Role;
@@ -31,16 +31,16 @@ fn shot(w: &mut Window, name: &str) {
 }
 
 #[test]
-fn the_accent_row_has_five_swatches_and_the_fifth_opens_a_picker() {
+fn the_accent_row_has_six_swatches_and_the_last_opens_a_picker() {
     let mut w = options_window();
-    for name in [tl!("Blue"), tl!("Teal"), tl!("Violet"), tl!("Graphite"), tl!("Custom color")] {
+    for name in [tl!("Ouro"), tl!("Blue"), tl!("Teal"), tl!("Violet"), tl!("Graphite"), tl!("Custom color")] {
         swatch(&w, name);
     }
-    assert_eq!(w.state().ui.accent, Accent::Blue);
+    assert_eq!(w.state().ui.accent, Accent::Ouro);
     assert!(!egui::Popup::is_any_open(&w.ctx));
     swatch(&w, tl!("Custom color")).click();
     w.run_steps(4);
-    // The fifth swatch is chosen, and its picker is open under it.
+    // The last swatch is chosen, and its picker is open under it.
     assert_eq!(w.state().ui.accent, Accent::Custom);
     assert!(egui::Popup::is_any_open(&w.ctx), "the picker opened");
     shot(&mut w, "options-custom-picker");

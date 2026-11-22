@@ -11454,12 +11454,6 @@ msgid "On"
 msgstr "Pe"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
-msgstr "În Wayland, reporniți MailCraft după activarea acestei opțiuni. Sunt necesare un server X11/XWayland accesibil și o zonă de notificare."
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "On the"
@@ -12164,6 +12158,12 @@ msgstr "În caz contrar, sunt afișate cu numele lor. În Mesaje nedorite sunt a
 #, fuzzy
 msgid "Otherwise they start in the reading pane, where Pop Out moves them into a window of their own."
 msgstr "Altfel, pornesc în panoul de citire, de unde Fereastră separată le mută într-o fereastră proprie."
+
+#. interface, name
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/theme/accent.rs
+#, fuzzy
+msgid "Ouro"
+msgstr "Ouro"
 
 #. name
 #: crates/model/src/calendar.rs
@@ -13689,6 +13689,12 @@ msgstr "Cerere în Mesaje de trimis."
 #, fuzzy
 msgid "Required"
 msgstr "Obligatoriu"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Requires a system tray."
+msgstr "Necesită o zonă de notificare."
 
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
@@ -27004,6 +27010,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Linii"
+
+#, fuzzy
+#~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
+#~ msgstr "În Wayland, reporniți MailCraft după activarea acestei opțiuni. Sunt necesare un server X11/XWayland accesibil și o zonă de notificare."
 
 #, fuzzy
 #~ msgid "Sent as written, without anything that runs or tracks. Pictures come from their web address, and recipients' programs decide whether to load them. A message you write shows a simpler copy of this signature; if you edit it there, that copy is sent instead."

@@ -42,6 +42,7 @@ const OTHER_WRITERS: &[(&str, &str)] = &[
     ("apps/mailcraft/src/favorites_organisation_flow.rs", "its tests"),
     ("apps/mailcraft/src/install.rs", "a probe of where the program is installed"),
     ("apps/mailcraft/src/logging.rs", "the log"),
+    ("apps/mailcraft/src/migrate_settings.rs", "the one-time copy of MailCraft's settings folder into OuroMail's"),
     ("apps/mailcraft/src/picture_cache.rs", "pictures kept for the window, never handed out"),
     ("apps/mailcraft/src/self_update.rs", "the program's own update"),
     ("apps/mailcraft/src/single_instance.rs", "a lock"),

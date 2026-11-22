@@ -66,7 +66,7 @@ fn the_window_shows_the_style_in_dark_only_with_the_accent_and_high_contrast() {
     assert_ne!(blue.canvas, neutral.canvas);
     // Blue-tinted: more blue than red in the window's grey.
     assert!(blue.canvas.b() > blue.canvas.r());
-    assert_eq!(blue.accent, Accent::Blue.ink_on_blue(false, None).accent);
+    assert_eq!(blue.accent, Accent::Ouro.ink_on_blue(false, None).accent);
 
     // The accent and high contrast apply to it as to the neutral greys.
     a.execute("ui.accent", json!({"accent": "teal"})).unwrap();

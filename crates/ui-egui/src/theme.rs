@@ -14,10 +14,11 @@ pub use accent::{
 };
 pub use blue::DarkStyle;
 
-/// MailCraft's own colour, the teal of its icon (and its darker ink for text on light
-/// backgrounds). The interface itself is neutral greys with a blue accent: see [`Tokens`].
-pub const APP_COLOR: Color32 = Color32::from_rgb(0x0B, 0x7F, 0xAB);
-pub const APP_INK: Color32 = Color32::from_rgb(0x08, 0x62, 0x88);
+/// OuroMail's own colour, the yellow of its icon, and its ink (the text on it, and the accent of
+/// the light theme). The interface itself is the Ouro theme: warm neutrals, an ink accent on a
+/// light window and a yellow one on a dark window: see [`Tokens`].
+pub const APP_COLOR: Color32 = Color32::from_rgb(0xFF, 0xDD, 0x00);
+pub const APP_INK: Color32 = Color32::from_rgb(0x17, 0x19, 0x18);
 
 /// The interface theme setting (File › Options › General): `System`, which follows the OS (or
 /// browser) light/dark appearance live and is what a new installation starts with, or a fixed
@@ -180,8 +181,10 @@ pub struct Tokens {
     pub status_bar: Color32,
     /// A selected row or item.
     pub selection: Color32,
-    /// Search hits.
+    /// Search hits: the highlighter yellow, the same in the light and the dark theme.
     pub find_highlight: Color32,
+    /// The text on a search hit (`find_highlight`): ink, in the light and the dark theme alike.
+    pub find_ink: Color32,
     /// A flagged message's row in the message list: a faint tint, unlike a selected row or one
     /// under the pointer.
     pub flagged_row: Color32,
@@ -272,60 +275,64 @@ pub struct Tokens {
 }
 
 impl Tokens {
-    /// The light palette: a cool grey window, white and near-white sheets, a blue accent.
+    /// The light palette, Ouro Light: a warm stone window, near-white panels, white sheets (HTML
+    /// mail is written for white), ink text, and ink as the accent, with the brand yellow washing
+    /// what is selected.
     ///
-    /// The window's own background (title bar, tab strip, module bar, status bar, and what shows
-    /// between the panes) is one grey; the ribbon is a card on it and the panes sit beside it.
+    /// The window's own background (tab strip, module bar, status bar, ribbon, and what shows
+    /// between the panes) is one stone; the title bar is a step darker; the panes sit beside it.
     pub fn light() -> Self {
-        let window = c(0xF2, 0xF4, 0xF7);
-        let panel = c(0xF8, 0xF9, 0xFB);
+        let window = c(0xF4, 0xF1, 0xEA);
+        let panel = c(0xFA, 0xF9, 0xF5);
         let surface = Color32::WHITE;
-        let border = c(0xDD, 0xE2, 0xEA);
-        let text = c(0x1D, 0x23, 0x30);
-        let hover = c(0xE8, 0xEC, 0xF2);
-        let accent = c(0x0F, 0x68, 0xF0);
-        let on_accent = Color32::WHITE;
-        let soft = c(0xE3, 0xED, 0xFF);
-        let selection = c(0xEE, 0xF4, 0xFF);
-        let input_border = c(0x7F, 0x8A, 0x9E);
+        let border = c(0xD9, 0xDA, 0xD4);
+        let text = c(0x17, 0x19, 0x18);
+        let dim = c(0x50, 0x54, 0x50);
+        let hover = c(0xF2, 0xF1, 0xED);
+        let accent = text;
+        let on_accent = c(0xFA, 0xF9, 0xF5);
+        let soft = c(0xFB, 0xF4, 0xC9);
+        let selection = c(0xFC, 0xEE, 0x93);
+        let input_border = dim;
         Tokens {
             dark: false,
             high_contrast: false,
             sender_dark: false,
-            title_bar: window,
-            ribbon: Color32::WHITE,
+            title_bar: c(0xEB, 0xE9, 0xE2),
+            ribbon: window,
             tab_strip: window,
             nav: window,
             canvas: window,
             panel,
             surface,
             border,
-            border_strong: c(0xB8, 0xC0, 0xCD),
+            border_strong: dim,
             text,
-            text_dim: c(0x5A, 0x62, 0x73),
-            text_disabled: c(0x7F, 0x88, 0x99),
-            icon: c(0x3A, 0x42, 0x52),
+            text_dim: dim,
+            text_disabled: c(0x7E, 0x81, 0x7C),
+            icon: c(0x2E, 0x31, 0x2F),
             hover,
-            pressed: c(0xD6, 0xDC, 0xE6),
+            pressed: c(0xE6, 0xE4, 0xDD),
             checked: soft,
             accent,
-            accent_text: c(0x06, 0x34, 0xC4),
+            accent_text: text,
             on_accent,
             input: Color32::WHITE,
             input_border,
-            group_label: c(0x5A, 0x62, 0x73),
+            group_label: dim,
             status_bar: window,
             selection,
-            find_highlight: Color32::from_rgba_unmultiplied(0xFF, 0xE0, 0x3D, 0x90),
-            flagged_row: c(0xFC, 0xF0, 0xF2),
-            overdue: c(0xB4, 0x23, 0x18),
-            off_hours: c(0xF5, 0xF7, 0xFA),
-            today: c(0xEA, 0xF1, 0xFF),
+            find_highlight: c(0xFF, 0xDD, 0x00),
+            find_ink: text,
+            flagged_row: c(0xFB, 0xED, 0xD0),
+            overdue: c(0xB3, 0x26, 0x1E),
+            off_hours: c(0xF8, 0xF6, 0xF1),
+            today: soft,
             menu: Color32::WHITE,
             blue: c(0x2F, 0x6F, 0xD0),
-            red: c(0xD1, 0x3B, 0x3B),
-            green: c(0x1F, 0x7A, 0x4D),
-            orange: c(0xB8, 0x5C, 0x08),
+            red: c(0xB3, 0x26, 0x1E),
+            green: c(0x24, 0x70, 0x3A),
+            orange: c(0x9C, 0x57, 0x00),
             icon_red: c(0xC4, 0x31, 0x4B),
             icon_yellow: c(0x9C, 0x67, 0x00),
             icon_green: c(0x2B, 0x7A, 0x4B),
@@ -334,23 +341,23 @@ impl Tokens {
             shadow_popup: Color32::from_black_alpha(40),
             shadow_window: Color32::from_black_alpha(50),
             text_selection: accent.linear_multiply(0.30),
-            selection_unfocused: c(0xF1, 0xF3, 0xF7),
+            selection_unfocused: c(0xE8, 0xE8, 0xE3),
             selection_edge: accent,
-            selection_edge_unfocused: c(0xA9, 0xB6, 0xCC),
+            selection_edge_unfocused: c(0x8A, 0x8C, 0x86),
             group_header: Color32::TRANSPARENT,
             selection_pill: soft,
             accent_soft: soft,
-            accent_soft_text: c(0x06, 0x34, 0xC4),
-            pill_quiet: c(0xEC, 0xEF, 0xF4),
+            accent_soft_text: text,
+            pill_quiet: c(0xEC, 0xEB, 0xE5),
             hover_subtle: hover.linear_multiply(0.6),
             hover_nav: panel.lerp_to_gamma(hover, 0.7),
             surface_sunken: surface.linear_multiply(0.55),
             focus_ring: accent.linear_multiply(0.5),
-            rule: c(0xE6, 0xE9, 0xEF),
-            border_faint: c(0xEC, 0xEF, 0xF4),
-            track: c(0xD6, 0xDC, 0xE6),
+            rule: c(0xE6, 0xE6, 0xE0),
+            border_faint: c(0xED, 0xED, 0xE8),
+            track: border,
             lane: window,
-            ribbon_edge: Stroke::new(1.0, c(0xE3, 0xE7, 0xEE)),
+            ribbon_edge: Stroke::new(1.0, c(0xE3, 0xE1, 0xDA)),
             pane_rule: true,
             field_edge: input_border,
             backstage_column: panel,
@@ -371,23 +378,22 @@ impl Tokens {
             avatar_shade: 1.0,
         }
     }
-    /// The dark palette: neutral greys, window to folder pane to list to ribbon, as in the other
-    /// Craft programs (no blue in the greys; only the accent and what it washes are coloured),
-    /// and a lighter blue accent.
+    /// The dark palette, Ouro Dark: near-black neutral greys, window to folder pane to ribbon to
+    /// sheet, ivory text, and the brand yellow as the accent with ink on it.
     pub fn dark() -> Self {
-        let window = c(0x18, 0x18, 0x1A);
-        let panel = c(0x1D, 0x1D, 0x1F);
-        let surface = c(0x22, 0x22, 0x24);
-        let border = c(0x38, 0x38, 0x3C);
-        let text = c(0xEE, 0xEE, 0xF0);
-        let hover = c(0x32, 0x32, 0x36);
-        let accent = c(0x5A, 0xA2, 0xFF);
-        let on_accent = c(0x08, 0x13, 0x2B);
-        let soft = c(0x26, 0x34, 0x51);
-        let selection = c(0x26, 0x2C, 0x39);
-        let input_border = c(0x84, 0x84, 0x8B);
-        let ribbon = c(0x2A, 0x2A, 0x2D);
-        let dim = c(0xB6, 0xB6, 0xBC);
+        let window = c(0x12, 0x13, 0x12);
+        let panel = c(0x17, 0x19, 0x18);
+        let surface = c(0x21, 0x1F, 0x1B);
+        let border = c(0x3A, 0x3C, 0x3A);
+        let text = c(0xFA, 0xF9, 0xF5);
+        let hover = c(0x2B, 0x2D, 0x2C);
+        let accent = c(0xFF, 0xDD, 0x00);
+        let on_accent = c(0x17, 0x19, 0x18);
+        let soft = c(0x49, 0x41, 0x16);
+        let selection = c(0x41, 0x3C, 0x14);
+        let input_border = c(0x96, 0x96, 0x94);
+        let ribbon = c(0x20, 0x22, 0x21);
+        let dim = c(0xB0, 0xAF, 0xAB);
         Tokens {
             dark: true,
             high_contrast: false,
@@ -400,32 +406,33 @@ impl Tokens {
             panel,
             surface,
             border,
-            border_strong: c(0x55, 0x55, 0x5B),
+            border_strong: input_border,
             text,
             text_dim: dim,
-            text_disabled: c(0x7A, 0x7A, 0x80),
-            icon: c(0xDE, 0xDE, 0xE2),
+            text_disabled: c(0x7C, 0x7B, 0x77),
+            icon: c(0xE4, 0xE3, 0xDF),
             hover,
-            pressed: c(0x3E, 0x3E, 0x43),
+            pressed: border,
             checked: soft,
             accent,
-            accent_text: c(0x8F, 0xBF, 0xFF),
+            accent_text: accent,
             on_accent,
-            input: surface,
+            input: c(0x33, 0x31, 0x2D),
             input_border,
             group_label: dim,
             status_bar: window,
             selection,
-            find_highlight: Color32::from_rgba_unmultiplied(0xC8, 0xA8, 0x00, 0x70),
-            flagged_row: c(0x3A, 0x2A, 0x2E),
-            overdue: c(0xFF, 0x99, 0x99),
-            off_hours: c(0x1E, 0x1E, 0x20),
-            today: c(0x22, 0x2C, 0x3E),
-            menu: ribbon,
+            find_highlight: c(0xFF, 0xDD, 0x00),
+            find_ink: on_accent,
+            flagged_row: c(0x37, 0x31, 0x1F),
+            overdue: c(0xFF, 0x9E, 0x9E),
+            off_hours: c(0x1C, 0x1B, 0x18),
+            today: soft,
+            menu: surface,
             blue: c(0x6C, 0x9B, 0xEA),
-            red: c(0xEE, 0x6A, 0x6A),
-            green: c(0x5B, 0xC0, 0x8A),
-            orange: c(0xF0, 0xA0, 0x50),
+            red: c(0xFF, 0x9E, 0x9E),
+            green: c(0x8F, 0xD6, 0x94),
+            orange: c(0xFF, 0xC2, 0x4D),
             icon_red: c(0xF0, 0x7A, 0x7A),
             icon_yellow: c(0xE8, 0xB7, 0x4A),
             icon_green: c(0x5B, 0xC0, 0x8A),
@@ -434,23 +441,23 @@ impl Tokens {
             shadow_popup: Color32::from_black_alpha(120),
             shadow_window: Color32::from_black_alpha(140),
             text_selection: accent.linear_multiply(0.45),
-            selection_unfocused: c(0x2A, 0x2A, 0x2E),
+            selection_unfocused: c(0x33, 0x31, 0x2D),
             selection_edge: accent,
-            selection_edge_unfocused: c(0x60, 0x60, 0x68),
+            selection_edge_unfocused: c(0x6E, 0x6E, 0x6B),
             group_header: Color32::TRANSPARENT,
             selection_pill: soft,
             accent_soft: soft,
-            accent_soft_text: c(0xCF, 0xE0, 0xFF),
-            pill_quiet: c(0x30, 0x30, 0x34),
+            accent_soft_text: text,
+            pill_quiet: c(0x30, 0x2F, 0x2B),
             hover_subtle: hover.linear_multiply(0.6),
             hover_nav: panel.lerp_to_gamma(hover, 0.7),
             surface_sunken: surface.linear_multiply(0.55),
             focus_ring: accent.linear_multiply(0.5),
-            rule: c(0x2E, 0x2E, 0x32),
-            border_faint: c(0x2A, 0x2A, 0x2D),
-            track: c(0x3E, 0x3E, 0x43),
+            rule: c(0x2C, 0x2D, 0x2B),
+            border_faint: c(0x26, 0x27, 0x25),
+            track: border,
             lane: panel,
-            ribbon_edge: Stroke::new(1.0, c(0x33, 0x33, 0x37)),
+            ribbon_edge: Stroke::new(1.0, c(0x2C, 0x2D, 0x2B)),
             pane_rule: true,
             field_edge: input_border,
             backstage_column: panel,
@@ -516,7 +523,7 @@ pub struct Palette {
 }
 
 impl Palette {
-    /// MailCraft's own look.
+    /// OuroMail's own look, the Ouro theme.
     pub fn builtin() -> Palette {
         Palette { light: Tokens::light(), dark: Tokens::dark() }
     }
@@ -1683,7 +1690,14 @@ mod tests {
             for (a, b) in [(t.selection, t.panel), (t.selection, t.surface), (t.selection, t.hover), (t.hover, t.panel), (t.hover, t.ribbon)] {
                 assert_ne!(a, b, "{theme}");
             }
-            assert!([t.tab_strip, t.nav, t.canvas, t.status_bar].iter().all(|c| *c == t.title_bar), "{theme}: the window's own colour");
+            assert!([t.tab_strip, t.nav, t.status_bar].iter().all(|c| *c == t.canvas), "{theme}: the window's own colour");
+            // The title bar is the window's own colour too, or (Ouro Light) a step darker than it:
+            // told apart from it, and never lighter.
+            assert!(
+                t.title_bar == t.canvas
+                    || (t.title_bar != t.ribbon && contrast(t.title_bar, egui::Color32::BLACK) < contrast(t.canvas, egui::Color32::BLACK)),
+                "{theme}: the title bar"
+            );
             assert_ne!(t.ribbon, t.title_bar, "{theme}: the ribbon is a band on the window");
         }
     }

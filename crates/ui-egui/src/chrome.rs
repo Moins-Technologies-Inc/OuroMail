@@ -724,11 +724,11 @@ pub fn pane_title(ui: &mut Ui, title: &str, detail: &str) {
     }
 }
 
-/// The app icon itself, the same picture the system shows for MailCraft, for the title bar: made
+/// The app icon itself, the same picture the system shows for OuroMail, for the title bar: made
 /// once and kept in the context. `None` when it can't be read (the title bar then shows no mark).
 fn title_icon(ctx: &egui::Context) -> Option<egui::TextureHandle> {
     /// The 64 px icon every build ships (`assets/app-icon`, attributed in `ATTRIBUTION.md`).
-    const PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/64x64/apps/io.github.billsecond.mailcraft.png");
+    const PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/64x64/apps/tech.moins.ouromail.png");
     let id = egui::Id::unique("mailcraft-title-icon");
     if let Some(texture) = ctx.data(|d| d.get_temp::<egui::TextureHandle>(id)) {
         return Some(texture);

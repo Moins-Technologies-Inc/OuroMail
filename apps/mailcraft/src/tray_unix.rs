@@ -149,7 +149,7 @@ impl ksni::Tray for Item {
         crate::APP_ID.into()
     }
     fn title(&self) -> String {
-        "MailCraft".into()
+        "OuroMail".into()
     }
     fn icon_pixmap(&self) -> Vec<ksni::Icon> {
         let [plain, badged] = &self.icons;

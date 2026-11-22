@@ -69,6 +69,7 @@ const PAIRS: &[Pair] = &[
     ("field_edge on window", |t| t.field_edge, |t| t.canvas, GRAPHIC),
     ("accent on surface", |t| t.accent, |t| t.surface, GRAPHIC),
     ("accent on panel", |t| t.accent, |t| t.panel, GRAPHIC),
+    ("find_ink on find_highlight", |t| t.find_ink, |t| t.find_highlight, TEXT),
     ("accent_soft_text on accent_soft", |t| t.accent_soft_text, |t| t.accent_soft, TEXT),
     ("text on accent_soft", |t| t.text, |t| t.accent_soft, TEXT),
     ("text_dim on pill_quiet", |t| t.text_dim, |t| t.pill_quiet, TEXT),
@@ -110,13 +111,79 @@ fn every_theme() -> Vec<(String, Tokens, bool)> {
     all
 }
 
+/// The default accent, Ouro, is the built-in palette exactly as `Tokens::light` and
+/// `Tokens::dark` have it: everything an accent sets is left as it is.
 #[test]
-fn blue_normal_is_the_look_that_shipped() {
-    let (light, dark) = (Tokens::build(false, Accent::Blue, false), Tokens::build(true, Accent::Blue, false));
-    assert_eq!(light.accent, Tokens::light().accent);
-    assert_eq!(light.selection, Tokens::light().selection);
-    assert_eq!(dark.accent_soft, Tokens::dark().accent_soft);
-    assert_eq!(dark.text_selection, Tokens::dark().text_selection);
+fn ouro_normal_is_the_built_in_look() {
+    assert_eq!(Accent::default(), Accent::Ouro);
+    for (built, base) in [(Tokens::build(false, Accent::Ouro, false), Tokens::light()), (Tokens::build(true, Accent::Ouro, false), Tokens::dark())] {
+        assert_eq!(built.accent, base.accent);
+        assert_eq!(built.accent_text, base.accent_text);
+        assert_eq!(built.on_accent, base.on_accent);
+        assert_eq!(built.accent_soft, base.accent_soft);
+        assert_eq!(built.accent_soft_text, base.accent_soft_text);
+        assert_eq!(built.checked, base.checked);
+        assert_eq!(built.selection_pill, base.selection_pill);
+        assert_eq!(built.selection, base.selection);
+        assert_eq!(built.today, base.today);
+        assert_eq!(built.selection_edge, base.selection_edge);
+        assert_eq!(built.backstage_mark, base.backstage_mark);
+        assert_eq!(built.text_selection, base.text_selection);
+        assert_eq!(built.focus_ring, base.focus_ring);
+        assert_eq!(built.band_chosen, base.band_chosen);
+        assert_eq!(built.band_meeting, base.band_meeting);
+    }
+}
+
+/// The Ouro palette as `theme.toml` gives it: the 22 roles, light and dark.
+#[test]
+fn the_ouro_palette_is_the_one_specified() {
+    let c = Color32::from_rgb;
+    let l = Tokens::light();
+    assert_eq!(
+        (l.canvas, l.panel, l.surface, l.title_bar, l.ribbon, l.input),
+        (c(0xF4, 0xF1, 0xEA), c(0xFA, 0xF9, 0xF5), c(0xFF, 0xFF, 0xFF), c(0xEB, 0xE9, 0xE2), c(0xF4, 0xF1, 0xEA), c(0xFF, 0xFF, 0xFF))
+    );
+    assert_eq!(
+        (l.text, l.text_dim, l.text_disabled, l.border, l.border_strong),
+        (c(0x17, 0x19, 0x18), c(0x50, 0x54, 0x50), c(0x7E, 0x81, 0x7C), c(0xD9, 0xDA, 0xD4), c(0x50, 0x54, 0x50))
+    );
+    assert_eq!(
+        (l.accent, l.on_accent, l.accent_soft, l.selection, l.selection_unfocused, l.hover),
+        (c(0x17, 0x19, 0x18), c(0xFA, 0xF9, 0xF5), c(0xFB, 0xF4, 0xC9), c(0xFC, 0xEE, 0x93), c(0xE8, 0xE8, 0xE3), c(0xF2, 0xF1, 0xED))
+    );
+    assert_eq!(
+        (l.flagged_row, l.overdue, l.green, l.orange, l.find_highlight),
+        (c(0xFB, 0xED, 0xD0), c(0xB3, 0x26, 0x1E), c(0x24, 0x70, 0x3A), c(0x9C, 0x57, 0x00), c(0xFF, 0xDD, 0x00))
+    );
+    let d = Tokens::dark();
+    assert_eq!(
+        (d.canvas, d.panel, d.surface, d.title_bar, d.ribbon, d.input),
+        (c(0x12, 0x13, 0x12), c(0x17, 0x19, 0x18), c(0x21, 0x1F, 0x1B), c(0x12, 0x13, 0x12), c(0x20, 0x22, 0x21), c(0x33, 0x31, 0x2D))
+    );
+    assert_eq!(
+        (d.text, d.text_dim, d.text_disabled, d.border, d.border_strong),
+        (c(0xFA, 0xF9, 0xF5), c(0xB0, 0xAF, 0xAB), c(0x7C, 0x7B, 0x77), c(0x3A, 0x3C, 0x3A), c(0x96, 0x96, 0x94))
+    );
+    assert_eq!(
+        (d.accent, d.on_accent, d.accent_soft, d.selection, d.selection_unfocused, d.hover),
+        (c(0xFF, 0xDD, 0x00), c(0x17, 0x19, 0x18), c(0x49, 0x41, 0x16), c(0x41, 0x3C, 0x14), c(0x33, 0x31, 0x2D), c(0x2B, 0x2D, 0x2C))
+    );
+    assert_eq!(
+        (d.flagged_row, d.overdue, d.green, d.orange, d.find_highlight),
+        (c(0x37, 0x31, 0x1F), c(0xFF, 0x9E, 0x9E), c(0x8F, 0xD6, 0x94), c(0xFF, 0xC2, 0x4D), c(0xFF, 0xDD, 0x00))
+    );
+}
+
+/// The text on a search hit is ink on the highlighter yellow in every theme, light or dark, high
+/// contrast or not (13:1).
+#[test]
+fn search_hits_are_ink_on_yellow_everywhere() {
+    for (mode, t, _) in every_theme() {
+        assert_eq!(t.find_highlight, Color32::from_rgb(0xFF, 0xDD, 0x00), "{mode}");
+        assert_eq!(t.find_ink, Color32::from_rgb(0x17, 0x19, 0x18), "{mode}");
+        assert!(ratio(t.find_ink, t.find_highlight) >= STRONG, "{mode}");
+    }
 }
 
 /// The pairs of one palette that fall short, with the mode named: the rules of `PAIRS` and, in

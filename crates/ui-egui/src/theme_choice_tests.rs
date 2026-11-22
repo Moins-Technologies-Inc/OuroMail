@@ -53,11 +53,11 @@ fn the_choice_is_saved_and_a_missing_or_unreadable_one_falls_back() {
     assert_eq!((back.accent, back.high_contrast), (Accent::Violet, true));
     // Keys from before this existed.
     let old: UiState = serde_json::from_value(json!({"theme": "dark"})).unwrap();
-    assert_eq!((old.accent, old.high_contrast, old.theme), (Accent::Blue, false, crate::theme::Appearance::Dark));
+    assert_eq!((old.accent, old.high_contrast, old.theme), (Accent::Ouro, false, crate::theme::Appearance::Dark));
     // Values that are not what they should be read as the defaults, and the rest is kept.
     for junk in [json!("mauve"), json!(5), json!(null), json!([1]), json!({"a": 1})] {
         let bad: UiState = serde_json::from_value(json!({"theme": "dark", "accent": junk.clone(), "highContrast": junk})).unwrap();
-        assert_eq!((bad.accent, bad.high_contrast, bad.theme), (Accent::Blue, false, crate::theme::Appearance::Dark));
+        assert_eq!((bad.accent, bad.high_contrast, bad.theme), (Accent::Ouro, false, crate::theme::Appearance::Dark));
     }
 }
 
@@ -73,9 +73,13 @@ fn the_window_shows_the_accent_and_high_contrast_at_once() {
     assert_eq!(t.accent, Accent::Graphite.ink(false, true, None).accent);
     assert!(t.high_contrast);
     a.execute("ui.highContrast", json!({"on": false})).unwrap();
-    a.execute("ui.accent", json!({"accent": "blue"})).unwrap();
+    a.execute("ui.accent", json!({"accent": "ouro"})).unwrap();
     a.logic(&ctx);
     assert_eq!(Tokens::get(&ctx).accent, Tokens::light().accent);
+    // MailCraft's blue stays a choice of its own.
+    a.execute("ui.accent", json!({"accent": "blue"})).unwrap();
+    a.logic(&ctx);
+    assert_eq!(Tokens::get(&ctx).accent, Accent::Blue.ink(false, false, None).accent);
 }
 
 #[test]

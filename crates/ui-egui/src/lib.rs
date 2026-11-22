@@ -1184,7 +1184,7 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "ui.accent",
         "Accent Colour",
         "File › Options",
-        r##"{"accent": "blue"|"teal"|"violet"|"graphite"|"custom"|"#rrggbb", "color"?: "#rrggbb"|[r, g, b]} — with "custom", "color" picks the colour of your own (without it, the one last picked is kept); "#rrggbb" as "accent" itself picks a custom colour straight away"##,
+        r##"{"accent": "ouro"|"blue"|"teal"|"violet"|"graphite"|"custom"|"#rrggbb", "color"?: "#rrggbb"|[r, g, b]} — with "custom", "color" picks the colour of your own (without it, the one last picked is kept); "#rrggbb" as "accent" itself picks a custom colour straight away"##,
     ),
     ("ui.darkStyle", "Dark Theme Style", "File › Options", r#"{"value": "neutral"|"blue"}"#),
     (
@@ -2928,10 +2928,10 @@ impl MailApp {
                             self.ui.custom_accent = Some(c);
                             Ok(json!({"accent": "custom", "color": theme::hex_string(c)}))
                         }
-                        None => {
-                            Err("`accent` is blue, teal, violet, graphite, custom or \"#rrggbb\"; with custom, `color` is \"#rrggbb\" or [r, g, b]"
-                                .into())
-                        }
+                        None => Err(
+                            "`accent` is ouro, blue, teal, violet, graphite, custom or \"#rrggbb\"; with custom, `color` is \"#rrggbb\" or [r, g, b]"
+                                .into(),
+                        ),
                     },
                 }
             }
@@ -5827,7 +5827,7 @@ impl MailApp {
         drag_pointer::apply(&ctx);
         self.by_hand = false;
         self.refusal();
-        let title = format!("{} - MailCraft", self.title_stem());
+        let title = format!("{} - OuroMail", self.title_stem());
         if title != self.sent_title {
             ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
             self.sent_title = title;

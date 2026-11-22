@@ -38,7 +38,7 @@ impl Backend {
             menu.append_items(&[&show, &sync, &PredefinedMenuItem::separator(), &quit])?;
             let icon = TrayIconBuilder::new()
                 .with_icon(plain.clone())
-                .with_tooltip("MailCraft")
+                .with_tooltip("OuroMail")
                 .with_menu(Box::new(menu))
                 .with_menu_on_left_click(cfg!(target_os = "macos"))
                 .build()?;

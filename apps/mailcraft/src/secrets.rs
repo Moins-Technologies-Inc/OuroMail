@@ -51,11 +51,13 @@ mod os {
 
     /// What the entries are filed under in the system's store. Together with the entry's name
     /// (`<key>#n`, `<key>#0`…) it is how an entry is found again, so it never changes: on Windows
-    /// the credential is `<key>#0.MailCraft`, in the macOS keychain a generic password whose
-    /// service is `MailCraft` and account `<key>#0`, and in the Secret Service an item whose
-    /// `service` and `username` attributes are the two. (keyring 3, which 0.4 used, filed them
-    /// alike; the attributes it added in the Secret Service are not searched on.)
-    pub(super) const SERVICE: &str = "MailCraft";
+    /// the credential is `<key>#0.OuroMail`, in the macOS keychain a generic password whose
+    /// service is `OuroMail` and account `<key>#0`, and in the Secret Service an item whose
+    /// `service` and `username` attributes are the two. OuroMail's own, not MailCraft's
+    /// (`MailCraft`): it never reads, overwrites or removes what MailCraft remembered, and signs
+    /// in again with its own registration. (keyring 3, which MailCraft 0.4 used, filed them alike;
+    /// the attributes it added in the Secret Service are not searched on.)
+    pub(super) const SERVICE: &str = "OuroMail";
 
     /// Opens the system's store.
     type Connect = Box<dyn Fn() -> keyring_core::Result<Arc<CredentialStore>> + Send + Sync>;
@@ -265,9 +267,9 @@ mod tests {
         assert_eq!(store.take_trouble(), None);
     }
 
-    /// What is kept is filed exactly as 0.4 (keyring 3) filed it, service `MailCraft` and entries
-    /// `<key>#n`, `<key>#0`…, so that what an earlier version remembered is found: in keyring's
-    /// mock store, never the system's.
+    /// What is kept is filed as MailCraft 0.4 (keyring 3) filed it, entries `<key>#n`, `<key>#0`…,
+    /// under OuroMail's own service `OuroMail`, so that what an earlier version of OuroMail
+    /// remembered is found: in keyring's mock store, never the system's.
     #[test]
     #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux", target_os = "freebsd"))]
     fn entries_keep_the_names_earlier_versions_gave_them() {
@@ -279,8 +281,8 @@ mod tests {
             let mock = mock.clone();
             os::OsStore::with(Box::new(move || Ok(mock.clone())))
         };
-        let entry = |user: &str| mock.build("MailCraft", user, None).unwrap();
-        assert_eq!(os::SERVICE, "MailCraft");
+        let entry = |user: &str| mock.build("OuroMail", user, None).unwrap();
+        assert_eq!(os::SERVICE, "OuroMail");
 
         // Kept by an earlier version, in two pieces: found and put back together.
         let key = "refresh:old@mailcraft.example";

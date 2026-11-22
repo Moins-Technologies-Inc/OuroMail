@@ -11458,12 +11458,6 @@ msgid "On"
 msgstr "Włączone"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
-msgstr "W środowisku Wayland uruchom MailCraft ponownie po włączeniu tej opcji. Wymagane są dostępny serwer X11/XWayland i zasobnik systemowy."
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "On the"
@@ -12168,6 +12162,12 @@ msgstr "W przeciwnym razie są pokazywane z nazwami. W Wiadomościach-śmieciach
 #, fuzzy
 msgid "Otherwise they start in the reading pane, where Pop Out moves them into a window of their own."
 msgstr "W przeciwnym razie otwierają się w okienku czytania, gdzie Otwórz w oknie przenosi je do osobnego okna."
+
+#. interface, name
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/theme/accent.rs
+#, fuzzy
+msgid "Ouro"
+msgstr "Ouro"
 
 #. name
 #: crates/model/src/calendar.rs
@@ -13693,6 +13693,12 @@ msgstr "Żądanie w Twojej skrzynce nadawczej."
 #, fuzzy
 msgid "Required"
 msgstr "Wymagany"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Requires a system tray."
+msgstr "Wymaga zasobnika systemowego."
 
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
@@ -27011,6 +27017,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Wiersze"
+
+#, fuzzy
+#~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
+#~ msgstr "W środowisku Wayland uruchom MailCraft ponownie po włączeniu tej opcji. Wymagane są dostępny serwer X11/XWayland i zasobnik systemowy."
 
 #, fuzzy
 #~ msgid "Sent as written, without anything that runs or tracks. Pictures come from their web address, and recipients' programs decide whether to load them. A message you write shows a simpler copy of this signature; if you edit it there, that copy is sent instead."

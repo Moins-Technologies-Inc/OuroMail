@@ -11032,11 +11032,6 @@ msgid "On"
 msgstr "Op"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
-msgstr "Op Wayland moet u MailCraft opnieuw starten na het inschakelen van deze optie. Een bereikbare X11- of XWayland-server en een systeemvak zijn nodig."
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "On the"
@@ -11727,6 +11722,12 @@ msgstr "Anders worden ze met hun naam weergegeven. In Ongewenste e-mail worden z
 #, fuzzy
 msgid "Otherwise they start in the reading pane, where Pop Out moves them into a window of their own."
 msgstr "Anders beginnen ze in het leesvenster, waar Loskoppelen ze naar een eigen venster verplaatst."
+
+#. interface, name
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/theme/accent.rs
+#, fuzzy
+msgid "Ouro"
+msgstr "Ouro"
 
 #. name
 #: crates/model/src/calendar.rs
@@ -13187,6 +13188,12 @@ msgstr "Verzoek in uw Postvak UIT."
 #, fuzzy
 msgid "Required"
 msgstr "Vereist"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Requires a system tray."
+msgstr "Vereist een systeemvak."
 
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
@@ -26173,6 +26180,9 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Regels"
+
+#~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
+#~ msgstr "Op Wayland moet u MailCraft opnieuw starten na het inschakelen van deze optie. Een bereikbare X11- of XWayland-server en een systeemvak zijn nodig."
 
 #, fuzzy
 #~ msgid "Sent as written, without anything that runs or tracks. Pictures come from their web address, and recipients' programs decide whether to load them. A message you write shows a simpler copy of this signature; if you edit it there, that copy is sent instead."

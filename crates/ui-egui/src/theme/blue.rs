@@ -8,7 +8,7 @@
 use egui::{Color32, Stroke};
 
 use super::Tokens;
-use super::accent::{Accent, AccentInk, DEFAULT_CUSTOM_COLOR, custom_ink};
+use super::accent::{Accent, AccentInk, DEFAULT_CUSTOM_COLOR, custom_ink, ouro_ink};
 
 fn hex(v: u32) -> Color32 {
     Color32::from_rgb((v >> 16) as u8, (v >> 8) as u8, v as u8)
@@ -77,6 +77,8 @@ impl Accent {
             today: hex(today),
         };
         match (self, high_contrast) {
+            // The Ouro theme's yellow on ink passes on the blue greys as on its own.
+            (Accent::Ouro, _) => ouro_ink(true),
             (Accent::Blue, false) => row(0x5AA2FF, 0x8FBFFF, 0x08132B, 0x1F3358, 0xCFE0FF, 0x1F2B40, 0x1B2B45),
             (Accent::Teal, false) => row(0x3FD1C0, 0x7DE3D6, 0x04201D, 0x123A38, 0xC4F5EF, 0x15292C, 0x143036),
             (Accent::Violet, false) => row(0xA593FF, 0xC2B6FF, 0x150C3D, 0x2B2358, 0xDDD5FF, 0x221E40, 0x262050),

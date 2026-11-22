@@ -11413,12 +11413,6 @@ msgid "On"
 msgstr "开"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
-#, fuzzy
-msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
-msgstr "在 Wayland 上，启用此选项后请重启 MailCraft。需要可用的 X11/XWayland 服务器和系统托盘。"
-
-#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "On the"
@@ -12123,6 +12117,12 @@ msgstr "否则将按名称显示。在垃圾邮件中始终按名称显示。"
 #, fuzzy
 msgid "Otherwise they start in the reading pane, where Pop Out moves them into a window of their own."
 msgstr "否则将在阅读窗格中打开，可使用“弹出”将其移到单独窗口。"
+
+#. interface, name
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/theme/accent.rs
+#, fuzzy
+msgid "Ouro"
+msgstr "Ouro"
 
 #. name
 #: crates/model/src/calendar.rs
@@ -13646,6 +13646,12 @@ msgstr "请求已放入发件箱。"
 #, fuzzy
 msgid "Required"
 msgstr "必填"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Requires a system tray."
+msgstr "需要系统托盘。"
 
 #. command label, interface, ribbon
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/mail_view.rs crates/ui-egui/src/ribbon.rs
@@ -26650,6 +26656,10 @@ msgstr "−二进制"
 #, fuzzy
 msgid "−Lines"
 msgstr "−行"
+
+#, fuzzy
+#~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
+#~ msgstr "在 Wayland 上，启用此选项后请重启 MailCraft。需要可用的 X11/XWayland 服务器和系统托盘。"
 
 #, fuzzy
 #~ msgid "Sent as written, without anything that runs or tracks. Pictures come from their web address, and recipients' programs decide whether to load them. A message you write shows a simpler copy of this signature; if you edit it there, that copy is sent instead."

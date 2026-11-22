@@ -35,10 +35,11 @@ fn has_unread(session: &mut mailcraft_engine::Session) -> bool {
     })
 }
 
-/// Both backends use the same artwork. Generate the badge once, never on each frame,
-/// and composite it into the icon so desktops cannot place it in a different corner.
+/// Both backends use the same artwork, OuroMail's tray icon (its bolder drawing for small sizes).
+/// Generate the badge once, never on each frame, and composite it into the icon so desktops
+/// cannot place it in a different corner.
 fn icons() -> Option<[egui::IconData; 2]> {
-    let plain = crate::app_icon()?;
+    let plain = crate::tray_icon()?;
     let mut badged = plain.clone();
     let side = badged.width.min(badged.height) as f32;
     let center = side * 0.20;
