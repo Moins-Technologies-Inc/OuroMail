@@ -962,8 +962,8 @@ msgstr ""
 "Ajouter une boîte\n"
 "aux lettres partagée"
 
-#. command label, interface
-#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
+#. command label, interface, ribbon location
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Add Shared Mailbox"
 msgstr "Ajouter une boîte aux lettres partagée"
@@ -1343,7 +1343,7 @@ msgid "All the conditions must hold"
 msgstr "Toutes les conditions doivent être remplies"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/forms.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Allow"
 msgstr "Autoriser"
@@ -1379,6 +1379,12 @@ msgid "Allow MailCraft to read shared mailboxes on the page that opened in your 
 msgstr "Autorisez MailCraft à lire les boîtes aux lettres partagées sur la page ouverte dans votre navigateur…"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Allow MailCraft to search your organisation's directory on the page that opened in your browser…"
+msgstr "Autorisez MailCraft à rechercher dans l'annuaire de votre organisation sur la page qui s'est ouverte dans votre navigateur…"
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Allow New Time Proposals"
@@ -1389,6 +1395,12 @@ msgstr "Autoriser les propositions de nouvel horaire"
 #, fuzzy
 msgid "Allow Reading Other People's Calendars"
 msgstr "Autoriser la lecture des calendriers des autres personnes"
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Allow Searching the Organisation's Directory"
+msgstr "Autoriser la recherche dans l'annuaire de l'organisation"
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -2011,6 +2023,12 @@ msgstr "Demander l'autorisation de lire et modifier vos listes To Do et vos tâc
 #, fuzzy
 msgid "Ask for permission to read and send from shared mailboxes and to read the calendars shared with you: Microsoft's page opens in your browser. Without it, nothing of them is read or sent."
 msgstr "Demander l'autorisation de lire les boîtes aux lettres partagées et d'envoyer depuis celles-ci, et de lire les calendriers partagés avec vous : la page de Microsoft s'ouvre dans votre navigateur. Sans elle, rien de tout cela n'est lu ni envoyé."
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Ask for permission to search your organisation's directory in Add Shared Mailbox: Microsoft's page opens in your browser. Without it, you type the shared mailbox's address."
+msgstr "Demander l'autorisation de rechercher dans l'annuaire de votre organisation dans Ajouter une boîte aux lettres partagée : la page de Microsoft s'ouvre dans votre navigateur. Sans elle, vous saisissez l'adresse de la boîte aux lettres partagée."
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -3647,6 +3665,12 @@ msgid "Close and keep as draft"
 msgstr "Fermer et conserver comme brouillon"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Close the open dialog first, then press Ask again."
+msgstr "Fermez d'abord la boîte de dialogue ouverte, puis cliquez sur Redemander."
+
+#. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Close this shared mailbox and remove the mail kept for it here. Nothing on the server changes."
@@ -3995,7 +4019,7 @@ msgid "Copy a Message for My Administrator"
 msgstr "Copier un message pour mon administrateur"
 
 #. interface, name
-#: crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs
+#: crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "Copy a message for my administrator"
 msgstr "Copier un message pour mon administrateur"
@@ -4190,6 +4214,12 @@ msgstr "Impossible de placer « {subject} » dans « {folder} » sur le serveur"
 #, fuzzy
 msgid "Couldn't reach Microsoft to open the calendar of {address}. Try again in a moment."
 msgstr "Impossible de joindre Microsoft pour ouvrir le calendrier de {address}. Réessayez dans un instant."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Couldn't reach Microsoft to search the directory. Type the address, or try again in a moment."
+msgstr "Impossible de joindre Microsoft pour rechercher dans l'annuaire. Saisissez l'adresse, ou réessayez dans un instant."
 
 #. why a mail server couldn't be used
 #: crates/net/src/push.rs crates/net/src/sync.rs
@@ -4826,6 +4856,42 @@ msgstr "Signé numériquement, signataire non vérifié"
 #: crates/engine/src/cmd/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
 msgid "Direct Replies To"
 msgstr "Réponses directes à"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: allowed"
+msgstr "Recherche dans l'annuaire : autorisée"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: asking on Microsoft's page…"
+msgstr "Recherche dans l'annuaire : demande en cours sur la page de Microsoft…"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: needs your administrator's approval"
+msgstr "Recherche dans l'annuaire : nécessite l'approbation de votre administrateur"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: not asked in this session"
+msgstr "Recherche dans l'annuaire : pas encore demandée dans cette session"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: not now (for this session)"
+msgstr "Recherche dans l'annuaire : pas maintenant (pour cette session)"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: your organisation doesn't allow it"
+msgstr "Recherche dans l'annuaire : votre organisation ne l'autorise pas"
 
 #. android, command label, interface, ribbon
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
@@ -6003,6 +6069,12 @@ msgstr "Terminez d'abord la connexion (votre navigateur attend)"
 #, fuzzy
 msgid "Finish signing in on Microsoft's page in your browser. MailCraft is waiting."
 msgstr "Terminez la connexion sur la page de Microsoft dans votre navigateur. MailCraft attend."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Finish the sign-in in your browser first, then press Ask again."
+msgstr "Terminez d'abord la connexion dans votre navigateur, puis cliquez sur Redemander."
 
 #. interface
 #: crates/ui-egui/src/credits.rs
@@ -7239,6 +7311,12 @@ msgid "If that page says you need admin approval"
 msgstr "Si cette page indique qu'une approbation de l'administrateur est nécessaire"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "If you allowed it before, or your administrator did for everybody, the first search in Add Shared Mailbox goes without a question."
+msgstr "Si vous l'avez autorisée auparavant, ou si votre administrateur l'a fait pour tout le monde, la première recherche dans Ajouter une boîte aux lettres partagée se fait sans question."
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "If you choose \"{choice}\", their organizers are told:"
@@ -8203,6 +8281,14 @@ msgstr "Conserver cette règle sur le serveur de {address} : elle s'y exécute a
 #, fuzzy
 msgid "Keep this version"
 msgstr "Conserver cette version"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Keep typing to narrow the list: only the first {n} is shown."
+msgid_plural "Keep typing to narrow the list: only the first {n} are shown."
+msgstr[0] "Continuez à taper pour affiner la liste : seul le premier ({n}) est affiché."
+msgstr[1] "Continuez à taper pour affiner la liste : seuls les {n} premiers sont affichés."
 
 #. interface
 #: crates/ui-egui/src/graph_switch.rs
@@ -9522,6 +9608,12 @@ msgid "Microsoft has no mailbox at this address"
 msgstr "Microsoft n'a aucune boîte aux lettres à cette adresse"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Microsoft is busy. Try again in a moment."
+msgstr "Microsoft est occupé. Réessayez dans un instant."
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Microsoft needs an application ID"
@@ -9978,6 +10070,12 @@ msgstr "Nom (A–Z)"
 #, fuzzy
 msgid "Name (optional)"
 msgstr "Nom (facultatif)"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Name or e-mail address"
+msgstr "Nom ou adresse e-mail"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -10882,6 +10980,12 @@ msgid "Nobody in the address list matches"
 msgstr "Personne ne correspond dans la liste d'adresses"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Nobody in your organisation's directory matches \"{query}\"."
+msgstr "Personne dans l'annuaire de votre organisation ne correspond à « {query} »."
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
 #, fuzzy
 msgid "Nobody is invited to this appointment."
@@ -11074,7 +11178,7 @@ msgid "Not much room on this phone"
 msgstr "Peu de place sur ce téléphone"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/task_sync.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/task_sync.rs
 #, fuzzy
 msgid "Not now"
 msgstr "Pas maintenant"
@@ -11699,6 +11803,12 @@ msgstr ""
 msgid "Open & Export"
 msgstr "Ouvrir et exporter"
 
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Open Add Shared Mailbox first"
+msgstr "Ouvrez d'abord Ajouter une boîte aux lettres partagée"
+
 #. command label
 #: crates/engine/src/cmd/mail.rs
 #, fuzzy
@@ -11997,6 +12107,12 @@ msgstr "Options"
 #, fuzzy
 msgid "Or is it one of these?"
 msgstr "Ou s'agit-il de l'un de ceux-ci ?"
+
+#. interface
+#: crates/ui-egui/src/dialogs.rs
+#, fuzzy
+msgid "Or type its address"
+msgstr "Ou saisissez son adresse"
 
 #. interface
 #: crates/ui-egui/src/ribbon.rs
@@ -14215,7 +14331,7 @@ msgid "Saving the mailbox… {done} of {total} messages"
 msgstr "Enregistrement de la boîte aux lettres… {done} messages sur {total}"
 
 #. interface
-#: crates/ui-egui/src/lib.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Say that this is meant with \"confirmed\": true."
 msgstr "Indiquez que c'est voulu avec \"confirmed\": true."
@@ -14399,6 +14515,12 @@ msgstr "Rechercher dans le courrier (essayez from:, has:attachment, is:unread)"
 msgid "Search people"
 msgstr "Rechercher des contacts"
 
+#. command label
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Search the Organisation's Directory"
+msgstr "Rechercher dans l'annuaire de l'organisation"
+
 #. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
@@ -14412,6 +14534,12 @@ msgid "Search time zones"
 msgstr "Rechercher un fuseau horaire"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Search your organisation"
+msgstr "Rechercher dans votre organisation"
+
+#. interface
 #: crates/ui-egui/src/address_book.rs
 #, fuzzy
 msgid "Searching the address list stopped unexpectedly"
@@ -14422,6 +14550,24 @@ msgstr "La recherche dans la liste d'adresses s'est arrêtée de manière inatte
 #, fuzzy
 msgid "Searching the server…"
 msgstr "Recherche sur le serveur…"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory isn't allowed. Type the address below, or allow it in File › Info."
+msgstr "La recherche dans l'annuaire de votre organisation n'est pas autorisée. Saisissez l'adresse ci-dessous, ou autorisez-la dans Fichier › Info."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory needs your permission. Microsoft's page opens in your browser to ask you, once."
+msgstr "Rechercher dans l'annuaire de votre organisation nécessite votre autorisation. La page de Microsoft s'ouvre dans votre navigateur pour vous la demander, une fois."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory…"
+msgstr "Recherche dans l'annuaire de votre organisation…"
 
 #. interface
 #: crates/ui-egui/src/address_book.rs
@@ -15583,6 +15729,12 @@ msgstr "Reconnectez-vous et choisissez {typed} sur la page de connexion, ou conf
 #, fuzzy
 msgid "Sign in again first"
 msgstr "Reconnectez-vous d'abord"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Sign in again with Send/Receive to search your organisation's directory."
+msgstr "Reconnectez-vous avec Envoyer/Recevoir pour rechercher dans l'annuaire de votre organisation."
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -17395,6 +17547,12 @@ msgid "The diagnostics weren't saved, so GitHub's page wasn't opened. Try again,
 msgstr "Les diagnostics n'ont pas été enregistrés, la page de GitHub n'a donc pas été ouverte. Réessayez, ou décochez Inclure les diagnostics."
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "The directory lists people and shared mailboxes alike; the one you pick is checked when it is added."
+msgstr "L'annuaire répertorie indifféremment les personnes et les boîtes aux lettres partagées ; celle que vous choisissez est vérifiée lors de l'ajout."
+
+#. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
 msgid "The domain {domain} names a server for Exchange's automatic setup (Autodiscover), so this looks like an Exchange server account. Type your password and press Connect: MailCraft looks for the server and checks the account. Nothing is sent until then."
@@ -18798,7 +18956,7 @@ msgid "This account has no mail server to send the answer through."
 msgstr "Ce compte n'a pas de serveur de messagerie par lequel envoyer la réponse."
 
 #. interface
-#: crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
 #, fuzzy
 msgid "This account has no sign-in with Microsoft"
 msgstr "Ce compte n'a pas de connexion Microsoft"
@@ -20107,7 +20265,7 @@ msgid "Try Signing In Again"
 msgstr "Réessayer de se connecter"
 
 #. interface
-#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
+#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
 #, fuzzy
 msgid "Try again"
 msgstr "Réessayer"
@@ -20177,6 +20335,12 @@ msgstr "Saisir"
 #, fuzzy
 msgid "Type a name in the search box to search the organisation's address list"
 msgstr "Tapez un nom dans la zone de recherche pour rechercher dans la liste d'adresses de l'organisation"
+
+#. interface, what a command says
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Type at least two letters of a name or address."
+msgstr "Saisissez au moins deux lettres d'un nom ou d'une adresse."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -20795,7 +20959,7 @@ msgid "What to Do When Your Organisation Has to Approve MailCraft"
 msgstr "Que faire lorsque votre organisation doit approuver MailCraft"
 
 #. android, interface, name
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "What to do next"
 msgstr "Que faire ensuite"
@@ -21282,6 +21446,12 @@ msgid "You're working offline. Turn off Work Offline (Send / Receive) to connect
 msgstr "Vous travaillez hors connexion. Désactivez Travailler hors connexion (Envoyer / Recevoir) pour vous connecter."
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "You're working offline: type the address."
+msgstr "Vous travaillez hors connexion : saisissez l'adresse."
+
+#. interface
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgid "Your automatic replies couldn't be read: {error}"
@@ -21432,6 +21602,12 @@ msgid "Your organisation doesn't let MailCraft read shared mailboxes and the cal
 msgstr "Votre organisation ne permet pas à MailCraft de lire les boîtes aux lettres partagées et les calendriers partagés avec vous"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Your organisation doesn't let MailCraft search its directory. Type the shared mailbox's address instead."
+msgstr "Votre organisation ne permet pas à MailCraft de rechercher dans son annuaire. Saisissez plutôt l'adresse de la boîte aux lettres partagée."
+
+#. interface
 #: crates/ui-egui/src/approval.rs
 #, fuzzy
 msgid "Your organisation has approved MailCraft"
@@ -21574,7 +21750,7 @@ msgid "[Draft]"
 msgstr "[Brouillon]"
 
 #. interface
-#: crates/ui-egui/src/keep_offline.rs crates/ui-egui/src/lib.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/keep_offline.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "`account` is required"
 msgstr "`account` est obligatoire"
@@ -23054,8 +23230,8 @@ msgstr "sélectionnez d'abord un rendez-vous"
 msgid "shared mailbox"
 msgstr "boîte aux lettres partagée"
 
-#. what a command says, why a command can't run
-#: crates/engine/src/cmd/shared.rs
+#. interface, what a command says, why a command can't run
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
 msgstr "les boîtes aux lettres partagées s'ouvrent sous un compte professionnel ou scolaire synchronisé via Microsoft Graph"
@@ -26720,6 +26896,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Lignes"
+
+#, fuzzy
+#~ msgid "Directory search: not allowed"
+#~ msgstr "Recherche dans l'annuaire : non autorisée"
 
 #, fuzzy
 #~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"

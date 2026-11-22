@@ -98,6 +98,7 @@ fn sign_in_request(cancel: &Arc<AtomicBool>) -> SignInRequest {
         favorites: false,
         mail_write: false,
         sync: false,
+        directory: false,
     }
 }
 

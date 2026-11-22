@@ -651,6 +651,14 @@ const NEVER: &[&str] = &[
     "sync.graphSearchRequest",
     "sync.applyGraphSearch",
     "ui.moreResultsOnServer",
+    // Nor a search of the organisation's directory (Add Shared Mailbox): it sends what is typed to
+    // Microsoft and brings back colleagues' names and addresses, and goes only on the owner's own
+    // typing. An agent that knows a shared mailbox names its address to `account.addSharedMailbox`.
+    "sync.directoryRequest",
+    "ui.searchDirectory",
+    // The owner's own answer to the directory's permission (`User.ReadBasic.All`), asked by itself:
+    // an agent never gives it, asked or not.
+    "ui.allowDirectory",
     "sync.holdSends",
     "sync.eventChanges",
     "sync.applyEventChanges",

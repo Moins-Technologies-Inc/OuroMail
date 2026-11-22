@@ -61,6 +61,9 @@ pub enum Dialog {
         /// The shared mailbox added for this address, while its Inbox is being read (S1): it is
         /// kept when that works, and removed again when it doesn't.
         checking: Option<Id>,
+        /// The search of the organisation's directory, as the owner types
+        /// ([`crate::directory_search`]): it goes with the dialog.
+        search: Box<crate::directory_search::DirectoryField>,
     },
     /// The address of a person whose calendar is to be opened under a Microsoft account (#70):
     /// it only collects the address, then runs `calendar.openShared`, and says how reading it
@@ -393,7 +396,7 @@ impl Dialog {
                             .id
                     }
                 };
-                Dialog::SharedMailbox { account, address: String::new(), error: String::new(), checking: None }
+                Dialog::SharedMailbox { account, address: String::new(), error: String::new(), checking: None, search: Box::default() }
             }
             "openCalendar" => {
                 // Under the account named, else the first that can open one.
@@ -2506,20 +2509,43 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
                 }
             }
         }
-        Dialog::SharedMailbox { account, address, error, checking } => {
+        Dialog::SharedMailbox { account, address, error, checking, search } => {
             let mut submit = false;
+            // An entry of the directory's search, picked: added as a typed address is.
+            let mut pick: Option<crate::directory_search::Pick> = None;
+            let searching = app.directory_offered(search);
             let owner = app.session.mailbox.account(*account).map(|a| a.email.clone()).unwrap_or_default();
             // (One that is being checked and is gone was answered: [`MailApp::finish_shared_check`].)
             if checking.is_some_and(|id| !app.shared_checking.contains(&id)) {
                 *checking = None;
             }
-            let open = window(ctx, tl!("Add Shared Mailbox"), 420.0, |ui| {
-                ui.label(tl!("The shared mailbox's e-mail address"));
+            // The list of what the directory found takes only the room the window leaves, so that
+            // the title, the fields and the buttons stay on screen at every window size.
+            if searching {
+                let drawn = ctx.memory(|m| m.area_rect(egui::Id::unique("dialog"))).map(|r| r.height());
+                search.room = Some(crate::directory_search::list_room(ctx.content_rect().height(), drawn, search.list_drawn));
+            }
+            let question = searching && search.area == crate::directory_search::Area::Offer;
+            let open = window(ctx, tl!("Add Shared Mailbox"), if searching { 460.0 } else { 420.0 }, |ui| {
+                if searching {
+                    pick = crate::directory_search::search_ui(app, ui, &t, *account, search, checking.is_none());
+                    ui.add_space(6.0);
+                    ui.label(tl!("Or type its address"));
+                } else {
+                    ui.label(tl!("The shared mailbox's e-mail address"));
+                }
                 let field = egui::TextEdit::singleline(address).hint_text("support@example.org").desired_width(f32::INFINITY);
                 let resp = crate::text_menu::field(ui.add_enabled(checking.is_none(), field));
-                if checking.is_none() && error.is_empty() {
+                // (With the search, the keyboard starts there and goes where the owner takes it.)
+                if checking.is_none() && error.is_empty() && !searching {
                     crate::text_menu::hold(&resp);
                 }
+                // Once the owner turns to the address, a row marked in the list is no longer what
+                // Enter adds.
+                if resp.changed() || resp.gained_focus() {
+                    search.highlight = None;
+                }
+                let in_address = resp.has_focus() || resp.lost_focus();
                 ui.label(
                     egui::RichText::new(crate::i18n::fmt(
                         tl!("Opened with {owner}'s sign-in. It needs Full Access to the mailbox, which your organisation's administrator gives. Microsoft asks you once to let MailCraft read and change shared mailboxes. What you change in it goes to it. Mail you write in it is from its address, and sending as it needs Send As or Send on Behalf permission: Microsoft asks you once more at your first send."),
@@ -2534,8 +2560,18 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
                 if !error.is_empty() {
                     ui.label(egui::RichText::new(error.as_str()).color(t.red));
                 }
-                let (ok, cancel) = buttons(ui, tl!("Add"), checking.is_none() && !address.trim().is_empty());
-                submit = checking.is_none() && (ok || enter);
+                let typed = !address.trim().is_empty();
+                let (ok, cancel) = buttons(ui, tl!("Add"), checking.is_none() && typed);
+                // Enter adds the row marked in the directory's list while the keyboard is in the
+                // search field or the list; else the typed address, when there is one (as Add,
+                // which is off without one); and, while the permission's question is up, only from
+                // the address field.
+                let lit = search.highlight.filter(|i| *i < search.entries.len() && searching && search.keyboard_here && !in_address);
+                let enter_adds = enter && typed && (!question || in_address);
+                match lit {
+                    Some(i) if enter && checking.is_none() && pick.is_none() => pick = Some(crate::directory_search::Pick::Add(i)),
+                    _ => submit = checking.is_none() && (ok || (enter_adds && lit.is_none())),
+                }
                 close |= cancel;
             });
             close |= !open;
@@ -2543,9 +2579,18 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
             if close && let Some(id) = checking.take() {
                 app.drop_shared_check(id);
             }
-            if submit && !close {
+            // (Named as the same address typed is: the directory's name isn't taken.)
+            let picked = match pick {
+                Some(crate::directory_search::Pick::Add(i)) if !close && checking.is_none() => search.entries.get(i).cloned(),
+                _ => None,
+            };
+            if let Some(entry) = &picked {
+                *address = entry.address.clone();
+            }
+            if (submit || picked.is_some()) && !close {
                 error.clear();
-                match app.execute("account.addSharedMailbox", json!({"account": *account, "address": address.trim()})) {
+                let params = json!({"account": *account, "address": address.trim()});
+                match app.execute("account.addSharedMailbox", params) {
                     // Kept only once its Inbox has been read: that is also when the owner is asked
                     // for the permission (S1).
                     Ok(added) => match added.get("id").and_then(Value::as_u64) {

@@ -108,6 +108,7 @@ mod dialog_scrim_tests;
 #[cfg(test)]
 mod dialog_size_tests;
 pub mod dialogs;
+pub mod directory_search;
 #[cfg(test)]
 mod draft_continue_tests;
 #[cfg(test)]
@@ -410,6 +411,11 @@ pub struct Services {
     /// Desktop: search a Microsoft mailbox on its server, one page, on a background thread
     /// (R6.2: More results on the server, only on the owner's click).
     pub graph_search: Option<Box<dyn Fn(server_search::GraphSearchJob) -> Receiver<mailcraft_model::sync::GraphSearchResult>>>,
+    /// Desktop: search the organisation's directory of a work or school Microsoft account for a
+    /// shared mailbox to open, on a background thread, with a token for the directory of its own
+    /// (Add Shared Mailbox, [`directory_search`]: only as the owner types, while the dialog is open).
+    /// Absent in the browser: the dialog then has only the address field.
+    pub graph_directory: Option<Box<dyn Fn(directory_search::DirectoryJob) -> Receiver<directory_search::DirectoryResult>>>,
     /// Keep a Microsoft account's tasks in step with Microsoft To Do (#248; [`task_sync`]).
     pub graph_tasks: Option<Box<dyn Fn(task_sync::TasksJob) -> Receiver<task_sync::TasksResult>>>,
     /// Keep a Microsoft account's rules on its server (#566; [`rule_sync`]).
@@ -864,6 +870,11 @@ pub struct SignInRequest {
     /// mailbox to be read). A no that is not the owner's to change is answered as for the Favorites
     /// ([`favorites_sync::NEEDS_APPROVAL`]…).
     pub sync: bool,
+    /// With `graph`: the page for searching the organisation's directory alone (`User.ReadBasic.All`,
+    /// `mailcraft_net::oauth::sign_in_for_directory`), because the owner said Allow in Add Shared
+    /// Mailbox after the window asked him. A no that is not the owner's to change is answered as for
+    /// the Favorites ([`favorites_sync::NEEDS_APPROVAL`]…).
+    pub directory: bool,
 }
 
 pub use mailcraft_host::calendar::{CalendarCheckRequest, CalendarCheckResult, CalendarCheckStep};
@@ -886,6 +897,8 @@ struct SigningIn {
     shared: Option<Id>,
     /// The one page for an older sign-in ([`server_sync`]).
     sync: bool,
+    /// The page for searching the organisation's directory ([`directory_search`]).
+    directory: bool,
     /// The owner signs in on a page in the browser (no kept token to renew it with).
     browser: bool,
     /// The mailbox opening it was started under ([`Session::openings`]): an answer that comes
@@ -1269,6 +1282,18 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "More Results on the Server",
         "Search",
         "{} — asks the server of each Microsoft mailbox the search in view involves for its next 50 results (the owner's click only: never by itself)",
+    ),
+    (
+        "ui.searchDirectory",
+        "Search the Organisation's Directory",
+        "Add Shared Mailbox",
+        r#"{"text"?: string, "answer"?: {"outcome": "found"|"nothingAsked"|"consentNeeded"|"notAllowed"|"approval"|"signInRefused"|"busy"|"unreachable", "entries"?: [{"name": string, "address": string}], "more"?: bool}} — the open Add Shared Mailbox dialog's search: `text` is typed into it and searched at the next frame, as the owner's typing is after its pause (the text goes to Microsoft Graph with a token for User.ReadBasic.All); with `answer` nothing is asked of anybody and it is shown as what Microsoft brought (for scripts, and for looking at the dialog in each of its states). Never for agents. Answers {"account", "pending": bool} or {"account", "shown": number}"#,
+    ),
+    (
+        "ui.allowDirectory",
+        "Allow Searching the Organisation's Directory",
+        "Add Shared Mailbox",
+        r#"{"account": number (a work or school Microsoft account), "confirmed": true} — the owner's Allow: Microsoft's page opens for searching the organisation's directory (User.ReadBasic.All) alone, asked for by itself and never with a sign-in. Never for agents. Answers {"pending": "signIn", "account": number}"#,
     ),
     (
         "ui.skipSync",
@@ -1784,6 +1809,10 @@ pub struct MailApp {
     shared_next: Option<Id>,
     /// The next sign-in is the one page for an older sign-in ([`server_sync`]).
     sync_next: bool,
+    /// The next sign-in is the page for searching the organisation's directory ([`directory_search`]).
+    directory_next: bool,
+    /// Add Shared Mailbox's search of the directory ([`directory_search`]).
+    pub(crate) directory_search: directory_search::DirectorySearching,
     /// The accounts whose one question about that is on screen or on Microsoft's page, and those
     /// whose question went away unanswered in this session (not put again by itself).
     pub(crate) sync_asking: std::collections::HashSet<Id>,
@@ -2107,6 +2136,8 @@ impl MailApp {
             favorites_next: false,
             shared_next: None,
             sync_next: false,
+            directory_next: false,
+            directory_search: Default::default(),
             sync_asking: Default::default(),
             sync_declined: Default::default(),
             shared_page_given: Default::default(),
@@ -2676,6 +2707,7 @@ impl MailApp {
             self.cancel_pending_sign_in(account);
             // What the window keeps for it (the command took what came from its server).
             self.forget_favorites(account);
+            self.forget_directory(Some(account));
             self.graph_tokens.remove(&account);
             self.passwords.remove(&account);
             self.dav_passwords.retain(|(id, _), _| *id != account);
@@ -2697,6 +2729,8 @@ impl MailApp {
             && self.session.mailbox.account(before.id).is_some_and(|after| !Self::same_sign_in_identity(before, after))
         {
             self.cancel_pending_sign_in(before.id);
+            // (The directory's token and whether it was allowed were the old sign-in's.)
+            self.forget_directory(Some(before.id));
         }
         // Servers changed: what was kept for the old ones is not given to the new, and the owner
         // is asked again.
@@ -2724,6 +2758,10 @@ impl MailApp {
                 // What it had for a calendar and contacts server that it doesn't now (or not for
                 // long): the same clean-up as the change that made it.
                 self.drop_changed_dav_secrets(&was_account);
+                // The directory's token and whether it was allowed were another sign-in's.
+                if self.session.mailbox.account(account).is_none_or(|now| !Self::same_sign_in_identity(&was_account, now)) {
+                    self.forget_directory(Some(account));
+                }
                 if self.session.mailbox.account(account).map(keys) != Some(was) {
                     self.passwords.remove(&account);
                     self.tokens.remove(&account);
@@ -3220,6 +3258,7 @@ impl MailApp {
                     .or_else(|| calendar_view::ui_command(self, id, p))
                     .or_else(|| meeting_dialogs::ui_command(self, id, p))
                     .or_else(|| favorites_sync::ui_command(self, id, p))
+                    .or_else(|| directory_search::ui_command(self, id, p))
                     .or_else(|| approval::ui_command(self, id, p))
                     .or_else(|| graph_switch::ui_command(self, id, p))
                     .or_else(|| updates::ui_command(self, id, p))
@@ -3642,6 +3681,7 @@ impl MailApp {
         let mail_only = std::mem::take(&mut self.mail_only_next);
         let favorites = std::mem::take(&mut self.favorites_next) && graph;
         let sync = std::mem::take(&mut self.sync_next) && graph;
+        let directory = std::mem::take(&mut self.directory_next) && graph;
         let shared = self.shared_next.take().filter(|_| sync);
         if self.signing_in.is_some() || self.approving() {
             return Err(tl!("Finish signing in first (your browser is waiting)").to_string());
@@ -3672,11 +3712,12 @@ impl MailApp {
             mail_write: graph
                 && (account == 0 || self.session.mailbox.account(account).is_some_and(|a| a.kind == mailcraft_model::AccountKind::Microsoft)),
             sync,
+            directory,
         };
         let snapshot = self.session.mailbox.account(account).cloned();
         let rx = sign_in(request);
         let opening = self.session.openings();
-        self.signing_in = Some(SigningIn { graph, favorites, quiet, account, snapshot, shared, sync, browser, opening, rx, cancel });
+        self.signing_in = Some(SigningIn { graph, favorites, quiet, account, snapshot, shared, sync, directory, browser, opening, rx, cancel });
         self.session.sync_status = waiting.to_string();
         Ok(())
     }
@@ -4089,6 +4130,7 @@ impl MailApp {
             self.sync_after_secrets.clear();
             self.tokens.clear();
             self.graph_tokens.clear();
+            self.forget_directory(None);
             self.jmap_refused.clear();
             self.jmap_send_asks.clear();
             self.ews_unreadable.clear();
@@ -4577,6 +4619,7 @@ impl MailApp {
         let snapshot = waiting.snapshot.clone();
         let asked_for = !waiting.quiet;
         let (for_shared, for_sync) = (waiting.shared, waiting.sync);
+        let for_directory = waiting.directory;
         let started_under = waiting.opening;
         let on_the_page = waiting.browser;
         self.signing_in = None;
@@ -4617,6 +4660,11 @@ impl MailApp {
         // mailbox that was to be read is read), or why not is said.
         if for_sync {
             return self.sync_signed_in(account, answer, for_shared);
+        }
+        // The page for searching the organisation's directory: what was typed is searched now, or
+        // why not is said in Add Shared Mailbox ([`directory_search`]).
+        if for_directory {
+            return self.directory_signed_in(account, answer);
         }
         // The owner picks who signs in on the page: it has to be this account. Somebody else's
         // tokens are neither used nor remembered, mail's or Graph's (#103).
@@ -5251,6 +5299,7 @@ impl MailApp {
         self.drive_fetch();
         self.offline_tick();
         self.drive_server_search();
+        self.directory_tick_at(now_ms());
         if self.server_searching.busy() {
             crate::software::repaint_after(ctx, std::time::Duration::from_millis(200));
         }

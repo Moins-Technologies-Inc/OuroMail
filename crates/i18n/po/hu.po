@@ -969,8 +969,8 @@ msgstr ""
 "Megosztott postafiók\n"
 "hozzáadása"
 
-#. command label, interface
-#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
+#. command label, interface, ribbon location
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Add Shared Mailbox"
 msgstr "Megosztott postafiók hozzáadása"
@@ -1348,7 +1348,7 @@ msgid "All the conditions must hold"
 msgstr "Minden feltételnek teljesülnie kell"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/forms.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Allow"
 msgstr "Engedélyezés"
@@ -1384,6 +1384,12 @@ msgid "Allow MailCraft to read shared mailboxes on the page that opened in your 
 msgstr "Hagyja, hogy MailCraft elolvassa a megosztott postafiókákat az oldalon, amely megnyílt a böngésző…"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Allow MailCraft to search your organisation's directory on the page that opened in your browser…"
+msgstr "Engedélyezze a MailCraftnak a szervezet címtárában való keresést a böngészőben megnyílt oldalon…"
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Allow New Time Proposals"
@@ -1394,6 +1400,12 @@ msgstr "Másik időpont javaslatának engedélyezése"
 #, fuzzy
 msgid "Allow Reading Other People's Calendars"
 msgstr "Hagyjuk, hogy más emberek naptárait olvassák"
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Allow Searching the Organisation's Directory"
+msgstr "Keresés engedélyezése a szervezet címtárában"
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -2016,6 +2028,12 @@ msgstr "Kérjen engedélyt a To Do listáinak és feladatainak olvasására és 
 #, fuzzy
 msgid "Ask for permission to read and send from shared mailboxes and to read the calendars shared with you: Microsoft's page opens in your browser. Without it, nothing of them is read or sent."
 msgstr "Engedély kérése a megosztott postafiókok olvasásához és az azokból való küldéshez, valamint az Önnel megosztott naptárak olvasásához: a Microsoft oldala megnyílik a böngészőben. Enélkül semmi sem olvasható vagy küldhető belőlük."
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Ask for permission to search your organisation's directory in Add Shared Mailbox: Microsoft's page opens in your browser. Without it, you type the shared mailbox's address."
+msgstr "Engedély kérése a szervezet címtárában való kereséshez a Megosztott postafiók hozzáadása ablakban: a Microsoft oldala megnyílik a böngészőben. Enélkül a megosztott postafiók címét kell beírnia."
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -3660,6 +3678,12 @@ msgid "Close and keep as draft"
 msgstr "Bezárás és megtartás piszkozatként"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Close the open dialog first, then press Ask again."
+msgstr "Először zárja be a megnyitott párbeszédablakot, majd kattintson az Újbóli engedélykérés hivatkozásra."
+
+#. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Close this shared mailbox and remove the mail kept for it here. Nothing on the server changes."
@@ -4008,7 +4032,7 @@ msgid "Copy a Message for My Administrator"
 msgstr "Üzenet másolása az Administratorom számára"
 
 #. interface, name
-#: crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs
+#: crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "Copy a message for my administrator"
 msgstr "Üzenet másolása az adminisztrátorom számára"
@@ -4204,6 +4228,12 @@ msgstr "Nem tudtam a \"{subject}\"-t a \"{folder}\"-be tenni a szerverre."
 #, fuzzy
 msgid "Couldn't reach Microsoft to open the calendar of {address}. Try again in a moment."
 msgstr "Nem sikerült elérni a Microsoftot, hogy kinyissa a {address} naptárát."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Couldn't reach Microsoft to search the directory. Type the address, or try again in a moment."
+msgstr "Nem sikerült elérni a Microsoftot a címtárban való kereséshez. Írja be a címet, vagy próbálja újra egy pillanat múlva."
 
 #. why a mail server couldn't be used
 #: crates/net/src/push.rs crates/net/src/sync.rs
@@ -4839,6 +4869,42 @@ msgstr "Digitális aláírás, nem hitelesített aláírás"
 #, fuzzy
 msgid "Direct Replies To"
 msgstr "Válaszok címzettjei"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: allowed"
+msgstr "Keresés a címtárban: engedélyezve"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: asking on Microsoft's page…"
+msgstr "Keresés a címtárban: kérés folyamatban a Microsoft oldalán…"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: needs your administrator's approval"
+msgstr "Keresés a címtárban: a rendszergazda jóváhagyása szükséges"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: not asked in this session"
+msgstr "Keresés a címtárban: ebben a munkamenetben még nem volt kérve"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: not now (for this session)"
+msgstr "Keresés a címtárban: most nem (ebben a munkamenetben)"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: your organisation doesn't allow it"
+msgstr "Keresés a címtárban: a szervezete nem engedélyezi"
 
 #. android, command label, interface, ribbon
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
@@ -6019,6 +6085,12 @@ msgstr "Befejezni a bejelentkezést (a böngészője várakozik)"
 #, fuzzy
 msgid "Finish signing in on Microsoft's page in your browser. MailCraft is waiting."
 msgstr "Fejezze be a bejelentkezést a Microsoft oldalán a böngészőben. A MailCraft várakozik."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Finish the sign-in in your browser first, then press Ask again."
+msgstr "Először fejezze be a bejelentkezést a böngészőben, majd kattintson az Újbóli engedélykérés hivatkozásra."
 
 #. interface
 #: crates/ui-egui/src/credits.rs
@@ -7267,6 +7339,12 @@ msgid "If that page says you need admin approval"
 msgstr "Ha az oldal szerint admin jóváhagyás kell,"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "If you allowed it before, or your administrator did for everybody, the first search in Add Shared Mailbox goes without a question."
+msgstr "Ha korábban engedélyezte, vagy a rendszergazda mindenkinek engedélyezte, a Megosztott postafiók hozzáadása ablakban az első keresés kérdés nélkül indul."
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "If you choose \"{choice}\", their organizers are told:"
@@ -8235,6 +8313,14 @@ msgstr "Tartsd ezt a szabályt a {address} szerverén: akkor ott fut, hogy MailC
 #, fuzzy
 msgid "Keep this version"
 msgstr "A változat elmentése"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Keep typing to narrow the list: only the first {n} is shown."
+msgid_plural "Keep typing to narrow the list: only the first {n} are shown."
+msgstr[0] "Gépeljen tovább a lista szűkítéséhez: csak az első {n} látható."
+msgstr[1] "Gépeljen tovább a lista szűkítéséhez: csak az első {n} látható."
 
 #. interface
 #: crates/ui-egui/src/graph_switch.rs
@@ -9559,6 +9645,12 @@ msgid "Microsoft has no mailbox at this address"
 msgstr "A Microsoftnak nincs postafiókja ezen a címen."
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Microsoft is busy. Try again in a moment."
+msgstr "A Microsoft éppen foglalt. Próbálja újra egy pillanat múlva."
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Microsoft needs an application ID"
@@ -10015,6 +10107,12 @@ msgstr "Név (A–Z)"
 #, fuzzy
 msgid "Name (optional)"
 msgstr "Név (nem kötelező)"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Name or e-mail address"
+msgstr "Név vagy e-mail-cím"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -10921,6 +11019,12 @@ msgid "Nobody in the address list matches"
 msgstr "Senki sem egyezik a címlistában"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Nobody in your organisation's directory matches \"{query}\"."
+msgstr "A szervezet címtárában senki sem egyezik ezzel: „{query}”."
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
 #, fuzzy
 msgid "Nobody is invited to this appointment."
@@ -11113,7 +11217,7 @@ msgid "Not much room on this phone"
 msgstr "Kevés a hely ezen a telefonon"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/task_sync.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/task_sync.rs
 #, fuzzy
 msgid "Not now"
 msgstr "Ne most."
@@ -11740,6 +11844,12 @@ msgstr ""
 msgid "Open & Export"
 msgstr "Megnyitás és exportálás"
 
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Open Add Shared Mailbox first"
+msgstr "Először nyissa meg a Megosztott postafiók hozzáadása ablakot"
+
 #. command label
 #: crates/engine/src/cmd/mail.rs
 #, fuzzy
@@ -12039,6 +12149,12 @@ msgstr "Beállítások"
 #, fuzzy
 msgid "Or is it one of these?"
 msgstr "Vagy ez is egy ilyen?"
+
+#. interface
+#: crates/ui-egui/src/dialogs.rs
+#, fuzzy
+msgid "Or type its address"
+msgstr "Vagy írja be a címét"
 
 #. interface
 #: crates/ui-egui/src/ribbon.rs
@@ -14275,7 +14391,7 @@ msgid "Saving the mailbox… {done} of {total} messages"
 msgstr "A postafiókát megmentve… a {total} {done} üzenetei"
 
 #. interface
-#: crates/ui-egui/src/lib.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Say that this is meant with \"confirmed\": true."
 msgstr "A művelet megerősítéséhez adja meg: \"confirmed\": true."
@@ -14462,6 +14578,12 @@ msgstr "Keresés a levelekben (pl. from:, has:attachment, is:unread)"
 msgid "Search people"
 msgstr "Keresés a névjegyek között"
 
+#. command label
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Search the Organisation's Directory"
+msgstr "Keresés a szervezet címtárában"
+
 #. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
@@ -14475,6 +14597,12 @@ msgid "Search time zones"
 msgstr "Időzónák keresése"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Search your organisation"
+msgstr "Keresés a szervezetben"
+
+#. interface
 #: crates/ui-egui/src/address_book.rs
 #, fuzzy
 msgid "Searching the address list stopped unexpectedly"
@@ -14485,6 +14613,24 @@ msgstr "A címlista keresése váratlanul leállt"
 #, fuzzy
 msgid "Searching the server…"
 msgstr "A szerver keresése…"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory isn't allowed. Type the address below, or allow it in File › Info."
+msgstr "A szervezet címtárában való keresés nincs engedélyezve. Írja be lent a címet, vagy engedélyezze a Fájl › Info menüben."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory needs your permission. Microsoft's page opens in your browser to ask you, once."
+msgstr "A szervezet címtárában való kereséshez az Ön engedélye szükséges. A Microsoft oldala megnyílik a böngészőben, és egyszer megkérdezi."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory…"
+msgstr "Keresés a szervezet címtárában…"
 
 #. interface
 #: crates/ui-egui/src/address_book.rs
@@ -15647,6 +15793,12 @@ msgstr "Jelentkezzen be újra a következő fiókkal: {typed}. Azt a fiókot is 
 #, fuzzy
 msgid "Sign in again first"
 msgstr "Előbb jelentkezzen be újra"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Sign in again with Send/Receive to search your organisation's directory."
+msgstr "Jelentkezzen be újra a Küldés/fogadás paranccsal a szervezet címtárában való kereséshez."
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -17471,6 +17623,12 @@ msgid "The diagnostics weren't saved, so GitHub's page wasn't opened. Try again,
 msgstr "A diagnosztika nem mentett, így GitHub oldala nem nyílt meg. Próbáld újra, vagy kikapcsolni a diagnosztikát."
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "The directory lists people and shared mailboxes alike; the one you pick is checked when it is added."
+msgstr "A címtár a személyeket és a megosztott postafiókokat egyformán listázza; a kiválasztottat a hozzáadáskor ellenőrzi a program."
+
+#. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
 msgid "The domain {domain} names a server for Exchange's automatic setup (Autodiscover), so this looks like an Exchange server account. Type your password and press Connect: MailCraft looks for the server and checks the account. Nothing is sent until then."
@@ -18876,7 +19034,7 @@ msgid "This account has no mail server to send the answer through."
 msgstr "Ez a fiók nincs levelező szerver, hogy küldje el a választ."
 
 #. interface
-#: crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
 #, fuzzy
 msgid "This account has no sign-in with Microsoft"
 msgstr "Ez a fiók nem jelent be a Microsoft-nál"
@@ -20186,7 +20344,7 @@ msgid "Try Signing In Again"
 msgstr "Próbáljon újra bejelentkezni!"
 
 #. interface
-#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
+#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
 #, fuzzy
 msgid "Try again"
 msgstr "Próbáld újra."
@@ -20256,6 +20414,12 @@ msgstr "Típus"
 #, fuzzy
 msgid "Type a name in the search box to search the organisation's address list"
 msgstr "Írjon be egy nevet a keresőmezőbe a szervezet címlistájában való kereséshez"
+
+#. interface, what a command says
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Type at least two letters of a name or address."
+msgstr "Írjon be legalább két betűt egy névből vagy címből."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -20880,7 +21044,7 @@ msgid "What to Do When Your Organisation Has to Approve MailCraft"
 msgstr "Teendők, ha a szervezetnek jóvá kell hagynia a MailCraft használatát"
 
 #. android, interface, name
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "What to do next"
 msgstr "Mi a következő lépés?"
@@ -21370,6 +21534,12 @@ msgid "You're working offline. Turn off Work Offline (Send / Receive) to connect
 msgstr "Kapcsold ki a munka offline (Küld / Fogadja) kapcsolódni."
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "You're working offline: type the address."
+msgstr "Kapcsolat nélkül dolgozik: írja be a címet."
+
+#. interface
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgid "Your automatic replies couldn't be read: {error}"
@@ -21520,6 +21690,12 @@ msgid "Your organisation doesn't let MailCraft read shared mailboxes and the cal
 msgstr "A szervezete nem engedi, hogy a MailCraft olvassa a megosztott postafiókokat és az Önnel megosztott naptárakat"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Your organisation doesn't let MailCraft search its directory. Type the shared mailbox's address instead."
+msgstr "A szervezete nem engedi, hogy a MailCraft keressen a címtárában. Írja be inkább a megosztott postafiók címét."
+
+#. interface
 #: crates/ui-egui/src/approval.rs
 #, fuzzy
 msgid "Your organisation has approved MailCraft"
@@ -21664,7 +21840,7 @@ msgid "[Draft]"
 msgstr "[Piszkozat]"
 
 #. interface
-#: crates/ui-egui/src/keep_offline.rs crates/ui-egui/src/lib.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/keep_offline.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "`account` is required"
 msgstr "Az `account` megadása kötelező"
@@ -23146,8 +23322,8 @@ msgstr "először kijelöl egy időpontot"
 msgid "shared mailbox"
 msgstr "megosztott postafiók"
 
-#. what a command says, why a command can't run
-#: crates/engine/src/cmd/shared.rs
+#. interface, what a command says, why a command can't run
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
 msgstr "megosztott postafiókok egy Microsoft Graph-on keresztül vezetett munkahelyi vagy iskolai fiók alatt nyithatók"
@@ -26817,6 +26993,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Sorok"
+
+#, fuzzy
+#~ msgid "Directory search: not allowed"
+#~ msgstr "Keresés a címtárban: nincs engedélyezve"
 
 #, fuzzy
 #~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"

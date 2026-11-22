@@ -595,6 +595,7 @@ fn add_shared_mailbox_waits_for_a_sign_in_being_renewed() {
         snapshot,
         shared: None,
         sync: false,
+        directory: false,
         browser: false,
         opening: app.session.openings(),
         rx,

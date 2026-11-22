@@ -1,0 +1,1 @@
+| 2026-11-22 | patch | Rough edges, shared mailboxes: the address can be found by searching the organisation's directory in Add Shared Mailbox, which lists people and shared mailboxes alike and asks for `User.ReadBasic.All` by itself |

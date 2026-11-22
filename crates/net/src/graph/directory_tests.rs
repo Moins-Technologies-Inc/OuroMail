@@ -378,3 +378,31 @@ fn standin_refuses_a_select_outside_read_basic() {
         assert_eq!(raw(&standin, &format!("$top={top}"), &eventual).0, 400, "{top}");
     }
 }
+
+/// Called off while it waits to ask once more (the dialog went, or the text changed): it waits no
+/// longer and asks nothing more; the request that was on its way had finished.
+#[test]
+fn a_called_off_search_waits_for_nothing_and_asks_nothing_more() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::time::{Duration, Instant};
+    let standin = standin();
+    standin.state().retry_after = Some(2);
+    standin.state().fail_next.push(("GET /v1.0/users".into(), 429, "TooManyRequests".into()));
+    let cancel = Arc::new(AtomicBool::new(false));
+    let flag = cancel.clone();
+    let caller = std::thread::spawn(move || {
+        std::thread::sleep(Duration::from_millis(300));
+        flag.store(true, Ordering::Relaxed);
+    });
+    let started = Instant::now();
+    let answer = search_directory_at_unless(&standin.url(), TOKEN, &owner(), &query("help"), &cancel);
+    caller.join().unwrap();
+    assert_eq!(standin.state().requests.len(), 1, "nothing more is sent once called off");
+    assert_eq!(answer.outcome, DirectoryOutcome::NothingAsked);
+    assert!(started.elapsed() < Duration::from_millis(1_500), "the wait ends when it is called off: {:?}", started.elapsed());
+    // The control: not called off, it is asked once more.
+    standin.state().fail_next.push(("GET /v1.0/users".into(), 429, "TooManyRequests".into()));
+    let answer = search_directory_at_unless(&standin.url(), TOKEN, &owner(), &query("help"), &AtomicBool::new(false));
+    assert_eq!((answer.outcome, standin.state().requests.len()), (DirectoryOutcome::Found, 3));
+}

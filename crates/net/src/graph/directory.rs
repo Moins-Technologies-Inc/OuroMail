@@ -19,7 +19,8 @@
 //! Nothing here asks for a permission, and nothing calls it yet but the tests: the window's search
 //! and the permission it needs come with it.
 
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 use mailcraft_model::Account;
 use mailcraft_model::directory::{DirectoryAnswer, DirectoryOutcome, DirectoryQuery, MAX_RESULTS, read_page};
@@ -37,6 +38,8 @@ const SEARCHED: [&str; 3] = ["displayName", "mail", "userPrincipalName"];
 pub(crate) const MAX_ANSWER: usize = 256 * 1024;
 /// How long an answer is waited for: the owner is waiting at a text field.
 const TIMEOUT: Duration = Duration::from_secs(10);
+/// How often a wait before the one more try looks whether the search was called off.
+const CALL_OFF_STEP: Duration = Duration::from_millis(50);
 /// Longest wait a busy Microsoft may ask for before the one more try; a longer one is busy.
 pub(crate) const MAX_RETRY_WAIT: u32 = 5;
 
@@ -46,6 +49,13 @@ pub(crate) const MAX_RETRY_WAIT: u32 = 5;
 /// calling thread, so a caller runs it off the window's thread.
 pub fn search_directory(token: &str, owner: &Account, query: &DirectoryQuery) -> DirectoryAnswer {
     search_directory_at(&super::graph_base(), token, owner, query)
+}
+
+/// [`search_directory`], called off by `cancel`: once it is set, nothing more is sent (a wait to
+/// ask once more ends at once, and that request is never made). The request already on its way
+/// finishes; what it brings is the caller's to drop.
+pub fn search_directory_unless(token: &str, owner: &Account, query: &DirectoryQuery, cancel: &AtomicBool) -> DirectoryAnswer {
+    search_directory_at_unless(&super::graph_base(), token, owner, query, cancel)
 }
 
 /// The `$search` of a search for `text`: its three clauses.
@@ -62,6 +72,11 @@ pub(crate) fn clauses(text: &str) -> String {
 
 /// [`search_directory`] of Graph at `base`.
 pub(super) fn search_directory_at(base: &str, token: &str, owner: &Account, query: &DirectoryQuery) -> DirectoryAnswer {
+    search_directory_at_unless(base, token, owner, query, &AtomicBool::new(false))
+}
+
+/// [`search_directory_unless`] of Graph at `base`.
+pub(super) fn search_directory_at_unless(base: &str, token: &str, owner: &Account, query: &DirectoryQuery, cancel: &AtomicBool) -> DirectoryAnswer {
     let answer = |outcome| DirectoryAnswer { account: query.account, ticket: query.ticket, outcome, ..Default::default() };
     // (A personal account, a shared mailbox, another account than the one the search is for.)
     if !owner.can_open_shared() || owner.id != query.account {
@@ -97,7 +112,19 @@ pub(super) fn search_directory_at(base: &str, token: &str, owner: &Account, quer
         match (outcome, wait) {
             (DirectoryOutcome::Busy, Some(seconds)) if !retried && matches!(reply.status, 429 | 503) && seconds <= MAX_RETRY_WAIT => {
                 retried = true;
-                std::thread::sleep(Duration::from_secs(u64::from(seconds)));
+                // Waited in short steps: called off meanwhile (the dialog went, or its text
+                // changed), nothing more is sent.
+                let until = Instant::now() + Duration::from_secs(u64::from(seconds));
+                loop {
+                    if cancel.load(Ordering::Relaxed) {
+                        return answer(DirectoryOutcome::NothingAsked);
+                    }
+                    let left = until.saturating_duration_since(Instant::now());
+                    if left.is_zero() {
+                        break;
+                    }
+                    std::thread::sleep(left.min(CALL_OFF_STEP));
+                }
             }
             _ => return answer(outcome),
         }

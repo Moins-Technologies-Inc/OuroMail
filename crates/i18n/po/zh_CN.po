@@ -966,8 +966,8 @@ msgstr ""
 "添加共享\n"
 "邮箱"
 
-#. command label, interface
-#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
+#. command label, interface, ribbon location
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Add Shared Mailbox"
 msgstr "添加共享邮箱"
@@ -1345,7 +1345,7 @@ msgid "All the conditions must hold"
 msgstr "所有条件必须成立"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/forms.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Allow"
 msgstr "允许"
@@ -1381,6 +1381,12 @@ msgid "Allow MailCraft to read shared mailboxes on the page that opened in your 
 msgstr "在浏览器打开的页面上，允许 MailCraft 读取共享邮箱…"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Allow MailCraft to search your organisation's directory on the page that opened in your browser…"
+msgstr "请在浏览器中打开的页面上允许 MailCraft 搜索您组织的目录…"
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Allow New Time Proposals"
@@ -1391,6 +1397,12 @@ msgstr "允许新的时间提议"
 #, fuzzy
 msgid "Allow Reading Other People's Calendars"
 msgstr "允许读取他人的日历"
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Allow Searching the Organisation's Directory"
+msgstr "允许搜索组织目录"
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -2014,6 +2026,12 @@ msgstr "请求读取和更改 To Do 列表及任务的权限：Microsoft 页面�
 #, fuzzy
 msgid "Ask for permission to read and send from shared mailboxes and to read the calendars shared with you: Microsoft's page opens in your browser. Without it, nothing of them is read or sent."
 msgstr "请求读取共享邮箱并从中发送邮件、读取与您共享的日历的权限：Microsoft 的页面将在浏览器中打开。没有该权限，不会读取或发送其中任何内容。"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Ask for permission to search your organisation's directory in Add Shared Mailbox: Microsoft's page opens in your browser. Without it, you type the shared mailbox's address."
+msgstr "请求允许在“添加共享邮箱”中搜索您组织的目录：Microsoft 的页面会在浏览器中打开。如果不允许，请输入共享邮箱的地址。"
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -3659,6 +3677,12 @@ msgid "Close and keep as draft"
 msgstr "关闭并保留为草稿"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Close the open dialog first, then press Ask again."
+msgstr "请先关闭打开的对话框，然后再点“再次询问”。"
+
+#. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Close this shared mailbox and remove the mail kept for it here. Nothing on the server changes."
@@ -4009,7 +4033,7 @@ msgid "Copy a Message for My Administrator"
 msgstr "复制消息给我的管理员"
 
 #. interface, name
-#: crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs
+#: crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "Copy a message for my administrator"
 msgstr "复制消息给我的管理员"
@@ -4205,6 +4229,12 @@ msgstr "无法将“{subject}”放入服务器上的“{folder}”中"
 #, fuzzy
 msgid "Couldn't reach Microsoft to open the calendar of {address}. Try again in a moment."
 msgstr "无法连接 Microsoft 以打开 {address} 的日历。请稍后重试。"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Couldn't reach Microsoft to search the directory. Type the address, or try again in a moment."
+msgstr "无法连接 Microsoft 以搜索目录。请输入地址，或稍后重试。"
 
 #. why a mail server couldn't be used
 #: crates/net/src/push.rs crates/net/src/sync.rs
@@ -4844,6 +4874,42 @@ msgstr "已数字签名，签名者未验证"
 #, fuzzy
 msgid "Direct Replies To"
 msgstr "将回复发送至"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: allowed"
+msgstr "目录搜索：已允许"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: asking on Microsoft's page…"
+msgstr "目录搜索：正在 Microsoft 的页面上询问…"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: needs your administrator's approval"
+msgstr "目录搜索：需要管理员批准"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: not asked in this session"
+msgstr "目录搜索：本次会话中尚未询问"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: not now (for this session)"
+msgstr "目录搜索：暂不（本次会话）"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: your organisation doesn't allow it"
+msgstr "目录搜索：您的组织不允许"
 
 #. android, command label, interface, ribbon
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
@@ -6020,6 +6086,12 @@ msgstr "首先完成登录（您的浏览器正在等待）"
 #, fuzzy
 msgid "Finish signing in on Microsoft's page in your browser. MailCraft is waiting."
 msgstr "请在浏览器中的 Microsoft 页面上完成登录。MailCraft 正在等待。"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Finish the sign-in in your browser first, then press Ask again."
+msgstr "请先在浏览器中完成登录，然后再点“再次询问”。"
 
 #. interface
 #: crates/ui-egui/src/credits.rs
@@ -7267,6 +7339,12 @@ msgid "If that page says you need admin approval"
 msgstr "如果该页面显示您需要管理员批准"
 
 #. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "If you allowed it before, or your administrator did for everybody, the first search in Add Shared Mailbox goes without a question."
+msgstr "如果您以前允许过，或管理员已为所有人允许，在“添加共享邮箱”中的首次搜索将不再询问。"
+
+#. interface
 #: crates/ui-egui/src/dialogs.rs
 #, fuzzy
 msgid "If you choose \"{choice}\", their organizers are told:"
@@ -8233,6 +8311,13 @@ msgstr "将此规则保留在 {address} 的服务器上：无论 MailCraft 是�
 #, fuzzy
 msgid "Keep this version"
 msgstr "保留此版本"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Keep typing to narrow the list: only the first {n} is shown."
+msgid_plural "Keep typing to narrow the list: only the first {n} are shown."
+msgstr[0] "继续输入以缩小列表范围：仅显示前 {n} 个。"
 
 #. interface
 #: crates/ui-egui/src/graph_switch.rs
@@ -9555,6 +9640,12 @@ msgid "Microsoft has no mailbox at this address"
 msgstr "Microsoft 在此地址没有邮箱"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Microsoft is busy. Try again in a moment."
+msgstr "Microsoft 正忙。请稍后重试。"
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Microsoft needs an application ID"
@@ -10013,6 +10104,12 @@ msgstr "名称(A–Z)"
 #, fuzzy
 msgid "Name (optional)"
 msgstr "名称（可选）"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Name or e-mail address"
+msgstr "姓名或电子邮件地址"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -10919,6 +11016,12 @@ msgid "Nobody in the address list matches"
 msgstr "地址列表中没有匹配的人"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Nobody in your organisation's directory matches \"{query}\"."
+msgstr "您组织的目录中没有与“{query}”匹配的人。"
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
 #, fuzzy
 msgid "Nobody is invited to this appointment."
@@ -11111,7 +11214,7 @@ msgid "Not much room on this phone"
 msgstr "此手机空间不多"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/task_sync.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/task_sync.rs
 #, fuzzy
 msgid "Not now"
 msgstr "暂不"
@@ -11738,6 +11841,12 @@ msgstr ""
 msgid "Open & Export"
 msgstr "打开和导出"
 
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Open Add Shared Mailbox first"
+msgstr "请先打开“添加共享邮箱”"
+
 #. command label
 #: crates/engine/src/cmd/mail.rs
 #, fuzzy
@@ -12037,6 +12146,12 @@ msgstr "选项"
 #, fuzzy
 msgid "Or is it one of these?"
 msgstr "或者是以下其中一项？"
+
+#. interface
+#: crates/ui-egui/src/dialogs.rs
+#, fuzzy
+msgid "Or type its address"
+msgstr "或输入其地址"
 
 #. interface
 #: crates/ui-egui/src/ribbon.rs
@@ -14275,7 +14390,7 @@ msgid "Saving the mailbox… {done} of {total} messages"
 msgstr "正在保存邮箱…已处理 {done}/{total} 封邮件"
 
 #. interface
-#: crates/ui-egui/src/lib.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Say that this is meant with \"confirmed\": true."
 msgstr "使用 \"confirmed\": true 表示确认。"
@@ -14462,6 +14577,12 @@ msgstr "搜索邮件（可尝试 from:、has:attachment、is:unread）"
 msgid "Search people"
 msgstr "搜索联系人"
 
+#. command label
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Search the Organisation's Directory"
+msgstr "搜索组织目录"
+
 #. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
@@ -14475,6 +14596,12 @@ msgid "Search time zones"
 msgstr "搜索时区"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Search your organisation"
+msgstr "在您的组织中搜索"
+
+#. interface
 #: crates/ui-egui/src/address_book.rs
 #, fuzzy
 msgid "Searching the address list stopped unexpectedly"
@@ -14485,6 +14612,24 @@ msgstr "搜索地址列表意外停止"
 #, fuzzy
 msgid "Searching the server…"
 msgstr "正在搜索服务器…"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory isn't allowed. Type the address below, or allow it in File › Info."
+msgstr "不允许搜索您组织的目录。请在下方输入地址，或在“文件 › 信息”中允许。"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory needs your permission. Microsoft's page opens in your browser to ask you, once."
+msgstr "搜索您组织的目录需要您的许可。Microsoft 的页面会在您的浏览器中打开，询问您一次。"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory…"
+msgstr "正在搜索您组织的目录…"
 
 #. interface
 #: crates/ui-egui/src/address_book.rs
@@ -15645,6 +15790,12 @@ msgstr "再次登录并在登录页面上选择 {typed}，或设置您登录时�
 #, fuzzy
 msgid "Sign in again first"
 msgstr "请先重新登录"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Sign in again with Send/Receive to search your organisation's directory."
+msgstr "请通过“发送/接收”重新登录，以搜索您组织的目录。"
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -17467,6 +17618,12 @@ msgid "The diagnostics weren't saved, so GitHub's page wasn't opened. Try again,
 msgstr "诊断信息未保存，因此未打开 GitHub 页面。请重试，或取消勾选“包含诊断”。"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "The directory lists people and shared mailboxes alike; the one you pick is checked when it is added."
+msgstr "目录中的人员和共享邮箱看起来一样；您选择的项目会在添加时进行检查。"
+
+#. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
 msgid "The domain {domain} names a server for Exchange's automatic setup (Autodiscover), so this looks like an Exchange server account. Type your password and press Connect: MailCraft looks for the server and checks the account. Nothing is sent until then."
@@ -18865,7 +19022,7 @@ msgid "This account has no mail server to send the answer through."
 msgstr "此账户没有可用于发送回复的邮件服务器。"
 
 #. interface
-#: crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
 #, fuzzy
 msgid "This account has no sign-in with Microsoft"
 msgstr "此账户未使用 Microsoft 登录"
@@ -20167,7 +20324,7 @@ msgid "Try Signing In Again"
 msgstr "尝试重新登录"
 
 #. interface
-#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
+#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
 #, fuzzy
 msgid "Try again"
 msgstr "重试"
@@ -20237,6 +20394,12 @@ msgstr "类型"
 #, fuzzy
 msgid "Type a name in the search box to search the organisation's address list"
 msgstr "在搜索框中输入姓名以搜索组织的地址列表"
+
+#. interface, what a command says
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Type at least two letters of a name or address."
+msgstr "请至少输入姓名或地址中的两个字符。"
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -20858,7 +21021,7 @@ msgid "What to Do When Your Organisation Has to Approve MailCraft"
 msgstr "当组织需要批准 MailCraft 时该怎么做"
 
 #. android, interface, name
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "What to do next"
 msgstr "接下来做什么"
@@ -21354,6 +21517,12 @@ msgid "You're working offline. Turn off Work Offline (Send / Receive) to connect
 msgstr "您正在离线工作。请在“发送/接收”中关闭“离线工作”以连接。"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "You're working offline: type the address."
+msgstr "您正在脱机工作：请输入地址。"
+
+#. interface
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgid "Your automatic replies couldn't be read: {error}"
@@ -21504,6 +21673,12 @@ msgid "Your organisation doesn't let MailCraft read shared mailboxes and the cal
 msgstr "您的组织不允许 MailCraft 读取共享邮箱和与您共享的日历"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Your organisation doesn't let MailCraft search its directory. Type the shared mailbox's address instead."
+msgstr "您的组织不允许 MailCraft 搜索其目录。请改为输入共享邮箱的地址。"
+
+#. interface
 #: crates/ui-egui/src/approval.rs
 #, fuzzy
 msgid "Your organisation has approved MailCraft"
@@ -21648,7 +21823,7 @@ msgid "[Draft]"
 msgstr "[草稿]"
 
 #. interface
-#: crates/ui-egui/src/keep_offline.rs crates/ui-egui/src/lib.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/keep_offline.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "`account` is required"
 msgstr "必须提供 `account`"
@@ -23127,8 +23302,8 @@ msgstr "请先选择一项约会"
 msgid "shared mailbox"
 msgstr "共享邮箱"
 
-#. what a command says, why a command can't run
-#: crates/engine/src/cmd/shared.rs
+#. interface, what a command says, why a command can't run
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
 msgstr "请在通过 Microsoft Graph 同步的工作或学校账户下打开共享邮箱"
@@ -26672,6 +26847,10 @@ msgstr "−二进制"
 #, fuzzy
 msgid "−Lines"
 msgstr "−行"
+
+#, fuzzy
+#~ msgid "Directory search: not allowed"
+#~ msgstr "目录搜索：未允许"
 
 #, fuzzy
 #~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"

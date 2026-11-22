@@ -1,0 +1,1 @@
+| 2026-11-22 | minor | `never`: Add Shared Mailbox's search of the organisation's directory and the answer to its permission (`ui.searchDirectory`, `sync.directoryRequest`, `ui.allowDirectory`); what it found is never in `ui.inspect` |

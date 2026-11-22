@@ -2268,7 +2268,7 @@ mod people;
 pub use people::{Opened, open_calendar};
 
 mod directory;
-pub use directory::search_directory;
+pub use directory::{search_directory, search_directory_unless};
 
 mod tasks;
 pub use tasks::{push_tasks, tasks};

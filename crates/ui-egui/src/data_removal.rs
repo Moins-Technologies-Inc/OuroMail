@@ -192,6 +192,7 @@ impl MailApp {
         self.subscribed.forget_addresses();
         self.tokens.clear();
         self.graph_tokens.clear();
+        self.forget_directory(None);
         if let Some(trouble) = self.services.secrets.as_ref().and_then(|store| store.take_trouble()) {
             report.failed.push((tl!("The system's credential store").to_string(), Why::Io(crate::store_trouble_notice(trouble))));
         }

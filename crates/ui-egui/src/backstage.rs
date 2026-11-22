@@ -341,6 +341,33 @@ fn info(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
                     let _ = app.run("ui.dialog", json!({"name": "sharedMailbox", "account": a.id}));
                 }
             });
+            // Where searching its organisation's directory for one stands in this session.
+            if let Some(line) = app.directory_line(a.id) {
+                ui.horizontal(|ui| {
+                    ui.add_space(36.0);
+                    let said = ui.label(egui::RichText::new(line.said).font(regular(11.5)).color(t.text_dim));
+                    if !app.directory_search.perm.contains_key(&a.id) {
+                        said.on_hover_text(tl!(
+                            "If you allowed it before, or your administrator did for everybody, the first search in Add Shared Mailbox goes without a question."
+                        ));
+                    }
+                    if line.help && ui.link(tl!("What to do next")).clicked() {
+                        let _ = app.run("ui.approvalHelp", json!({"account": a.id}));
+                    }
+                    if line.copy && ui.link(tl!("Copy a message for my administrator")).clicked() {
+                        let _ = app.run("ui.copyAdminMessage", json!({"account": a.id}));
+                    }
+                    if line.again {
+                        let link = ui.link(tl!("Ask again")).on_hover_text(tl!(
+                            "Ask for permission to search your organisation's directory in Add Shared Mailbox: Microsoft's page opens in your browser. Without it, you type the shared mailbox's address."
+                        ));
+                        app.hit.add("directoryAskAgain", a.id, link.rect);
+                        if link.clicked() {
+                            app.directory_ask_again(a.id);
+                        }
+                    }
+                });
+            }
             ui.add_space(4.0);
         }
     }
