@@ -777,3 +777,53 @@ fn a_reply_in_a_shared_mailbox_starts_with_its_own_reply_signature_and_the_owner
     let body = s.compose.as_ref().unwrap().body.plain();
     assert!(body.contains("Lena") && !body.contains("The front desk"), "{body:?}");
 }
+
+/// Add Shared Mailbox can't be used for a personal Microsoft account (Outlook.com has no shared
+/// mailboxes): the command says so before it is run, as the window's own check does, so that a
+/// ribbon button that follows it is greyed rather than lit and then refused.
+#[test]
+fn add_shared_mailbox_is_disabled_when_the_only_microsoft_account_is_personal() {
+    let mut s = Session::empty();
+    s.run("account.add", &json!({"email": "ada@example.org"})).unwrap();
+    assert!(!s.enabled("account.addSharedMailbox"), "a local account opens none");
+    // Personal by what its sign-in said, and by an address of Outlook.com's own.
+    let said = s
+        .run("account.add", &json!({"email": "ada@personal.example", "kind": "microsoft", "auth": "oauth2", "directory": "personal"}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    assert!(!s.enabled("account.addSharedMailbox"), "a personal Microsoft account opens none");
+    s.run("account.add", &json!({"email": "ada@outlook.com", "kind": "microsoft", "auth": "oauth2"})).unwrap();
+    assert!(!s.enabled("account.addSharedMailbox"), "an Outlook.com address with nothing else said is a personal one");
+    let refused = add(&mut s, json!({"address": SHARED})).unwrap_err();
+    assert!(refused.contains("work or school"), "{refused}");
+    let named = add(&mut s, json!({"account": said, "address": SHARED})).unwrap_err();
+    assert!(named.contains("work or school"), "named, it is refused before it runs: {named}");
+    assert!(s.mailbox.accounts.iter().all(|a| !a.is_shared()));
+}
+
+/// With a work or school account beside a personal one, the command is enabled and opens the
+/// mailbox under the work account, the first that can have one; a shared mailbox itself never
+/// counts as an account another one is opened under.
+#[test]
+fn add_shared_mailbox_is_enabled_for_a_work_account_and_never_for_a_shared_one() {
+    let mut s = Session::empty();
+    let personal = s
+        .run("account.add", &json!({"email": "ada@personal.example", "kind": "microsoft", "auth": "oauth2", "directory": "personal"}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let work = s.run("account.add", &json!({"email": OWNER, "kind": "microsoft", "auth": "oauth2", "directory": "organisation"})).unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    assert!(s.enabled("account.addSharedMailbox"));
+    let shared = add(&mut s, json!({"address": SHARED})).unwrap();
+    assert_eq!(s.mailbox.account(shared).and_then(|a| a.shared_of), Some(work), "under the work account, not the personal one first");
+    assert!(s.mailbox.account(personal).is_some_and(|a| !a.can_open_shared()));
+    assert!(s.mailbox.account(shared).is_some_and(|a| !a.can_open_shared()), "a shared mailbox opens no other");
+    // The work account becomes a personal one: the shared mailbox left over doesn't keep it enabled.
+    if let Ok(a) = s.mailbox.account_mut(work) {
+        a.oauth = Some(mailcraft_model::OAuth { directory: mailcraft_model::Directory::Personal, ..Default::default() });
+    }
+    assert!(!s.enabled("account.addSharedMailbox"));
+}

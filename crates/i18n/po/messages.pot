@@ -794,13 +794,20 @@ msgstr ""
 msgid "Add Sender to Contacts"
 msgstr ""
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 msgid "Add Shared Mailbox"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 msgid "Add Shared Mailbox…"
 msgstr ""
 
@@ -11049,6 +11056,11 @@ msgstr ""
 msgid "Remove Shared Mailbox"
 msgstr ""
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+msgid "Remove Shared Mailbox…"
+msgstr ""
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 msgid "Remove Your Imported Key"
@@ -19206,7 +19218,7 @@ msgstr ""
 
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
 msgstr ""
 
 #. what a command says

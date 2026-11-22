@@ -952,6 +952,16 @@ msgstr "გამგზავნის დამატება"
 msgid "Add Sender to Contacts"
 msgstr "გამგზავნის კონტაქტებში დამატება"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"საერთო საფოსტო\n"
+"ყუთის დამატება"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -959,7 +969,7 @@ msgid "Add Shared Mailbox"
 msgstr "საერთო საფოსტო ყუთის დამატება"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "საერთო საფოსტო ყუთის დამატება…"
@@ -13271,6 +13281,12 @@ msgstr "გაზიარებული კალენდრის წაშ�
 msgid "Remove Shared Mailbox"
 msgstr "საერთო საფოსტო ყუთის წაშლა"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "საერთო საფოსტო ყუთის წაშლა…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -23057,8 +23073,8 @@ msgstr "საერთო საფოსტო ყუთი"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "საერთო საფოსტო ყუთები იხსნება Microsoft Graph-ით სინქრონიზებული ანგარიშით"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "საერთო საფოსტო ყუთები იხსნება Microsoft Graph-ით სინქრონიზებული სამსახურის ან სასწავლებლის ანგარიშით"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -26713,6 +26729,10 @@ msgstr ""
 #: crates/ui-egui/src/credits.rs
 msgid "−Lines"
 msgstr ""
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "საერთო საფოსტო ყუთები იხსნება Microsoft Graph-ით სინქრონიზებული ანგარიშით"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."

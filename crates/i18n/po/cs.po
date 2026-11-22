@@ -955,6 +955,16 @@ msgstr "Přidat odesílatele"
 msgid "Add Sender to Contacts"
 msgstr "Přidat odesílatele do kontaktů"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"Přidat sdílenou\n"
+"poštovní schránku"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -962,7 +972,7 @@ msgid "Add Shared Mailbox"
 msgstr "Přidat sdílenou poštovní schránku"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "Přidat sdílenou poštovní schránku…"
@@ -13338,6 +13348,12 @@ msgstr "Odebrat sdílený kalendář"
 msgid "Remove Shared Mailbox"
 msgstr "Odebrat sdílenou poštovní schránku"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "Odebrat sdílenou poštovní schránku…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -23191,8 +23207,8 @@ msgstr "sdílená poštovní schránka"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "sdílené poštovní schránky se otevírají pod účtem synchronizovaným přes Microsoft Graph"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "sdílené poštovní schránky se otevírají pod pracovním nebo školním účtem synchronizovaným přes Microsoft Graph"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -26982,6 +26998,10 @@ msgstr "−Binární"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Řádky"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "sdílené poštovní schránky se otevírají pod účtem synchronizovaným přes Microsoft Graph"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."

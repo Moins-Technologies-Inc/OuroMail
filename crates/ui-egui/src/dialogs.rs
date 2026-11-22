@@ -377,12 +377,21 @@ impl Dialog {
             }
             "replyTo" => Dialog::ReplyTo { text: app.session.compose.as_ref()?.reply_to.clone(), error: String::new() },
             "sharedMailbox" => {
-                // Under the account named, else the first that can open one.
-                let can = |a: &&mailcraft_model::Account| crate::shared_mailboxes::can_open_shared(a);
+                // Under the account named; else the account of the folder in view, or the one the
+                // shared mailbox in view is opened through (the ribbon's button); else the first
+                // that can open one.
+                let can = |a: &&mailcraft_model::Account| a.can_open_shared();
                 let mailbox = &app.session.mailbox;
                 let account = match id("account") {
                     Some(id) => mailbox.account(id).filter(can)?.id,
-                    None => mailbox.accounts.iter().find(can)?.id,
+                    None => {
+                        mailbox
+                            .folder(app.session.view.folder)
+                            .and_then(|f| mailbox.owner_of(f.account).or_else(|| mailbox.account(f.account)))
+                            .filter(can)
+                            .or_else(|| mailbox.accounts.iter().find(can))?
+                            .id
+                    }
                 };
                 Dialog::SharedMailbox { account, address: String::new(), error: String::new(), checking: None }
             }
@@ -2103,6 +2112,7 @@ pub fn input_dialog(id: &str, params: &Value) -> Option<&'static str> {
         "review.wordCount" => Some("wordCount"),
         "account.add" if !has("email") => Some("account"),
         "calendar.openShared" if !has("address") => Some("openCalendar"),
+        "account.addSharedMailbox" if !has("address") => Some("sharedMailbox"),
         "calendar.subscribe" if !has("address") => Some("subscribe"),
         "rules.list" => Some("rules"),
         "junk.list" => Some("junkOptions"),

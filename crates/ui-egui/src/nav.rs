@@ -439,6 +439,20 @@ fn heading(app: &mut MailApp, ui: &mut Ui, id: Id, name: &str, height: f32, text
                 }
                 ui.separator();
             }
+            // A shared mailbox is opened under an account that can have one, and closed from its
+            // own heading (#70): what File › Info runs, the question before a removal included.
+            let (opens, shared) = app.session.mailbox.account(id).map_or((false, false), |a| (a.can_open_shared(), a.is_shared()));
+            if opens && ui.add(egui::Button::new(tl!("Add Shared Mailbox…")).min_size(vec2(180.0, 0.0))).clicked() {
+                let _ = app.run("ui.dialog", json!({"name": "sharedMailbox", "account": id}));
+                ui.close();
+            }
+            if shared && ui.add(egui::Button::new(tl!("Remove Shared Mailbox…")).min_size(vec2(180.0, 0.0))).clicked() {
+                let _ = app.run("account.removeSharedMailbox", json!({"id": id}));
+                ui.close();
+            }
+            if opens || shared {
+                ui.separator();
+            }
             if ui.add(egui::Button::new(tl!("Properties…")).min_size(vec2(180.0, 0.0))).clicked() {
                 let _ = app.run("folder.properties", json!({"account": id}));
                 ui.close();

@@ -1107,3 +1107,77 @@ fn delete_on_a_shared_mailboxs_conversation_names_whose_folder_it_is() {
     let Some(crate::dialogs::Dialog::Confirm { ask, .. }) = &app.dialog else { panic!("not asked") };
     assert!(ask.text.starts_with(&format!("This deletes the conversation from Inbox - {SHARED}: ")), "{}", ask.text);
 }
+
+/// Folder › New › Add Shared Mailbox runs the command without an address, which opens its
+/// dialog, as the Calendar's Open Shared Calendar does; with an address it is run as it is.
+#[test]
+fn add_shared_mailbox_without_an_address_opens_its_dialog() {
+    assert_eq!(crate::dialogs::input_dialog("account.addSharedMailbox", &json!({})), Some("sharedMailbox"));
+    assert_eq!(crate::dialogs::input_dialog("account.addSharedMailbox", &json!({"address": null})), Some("sharedMailbox"));
+    assert_eq!(crate::dialogs::input_dialog("account.addSharedMailbox", &json!({"address": SHARED})), None);
+    let (app, _, _, _, _) = window();
+    let tab = crate::ribbon::describe_tab(&app, "Folder");
+    let new = tab.groups.iter().find(|g| g.title == "New").unwrap();
+    let item = new.items.iter().find(|i| i.command.as_ref().is_some_and(|(c, _)| *c == "account.addSharedMailbox")).unwrap();
+    assert_eq!((item.label, item.command.as_ref().map(|(_, p)| p.clone())), ("Add Shared\nMailbox", Some(json!({}))));
+    assert!(crate::ribbon::usable(&app, item));
+}
+
+/// The ribbon's button opens the dialog under the account of the folder in view, when that one
+/// can open a shared mailbox.
+#[test]
+fn the_ribbon_opens_the_dialog_under_the_account_in_view() {
+    let (mut app, owner, _, _, _) = window();
+    let second = app.execute("account.add", json!({"email": "lena@example.org", "kind": "microsoft"})).unwrap()["id"].as_u64().unwrap();
+    for (account, expected) in [(second, second), (owner, owner)] {
+        let inbox = app.session.mailbox.folder_of_kind(account, FolderKind::Inbox).unwrap();
+        app.execute("folder.select", json!({"id": inbox})).unwrap();
+        app.dialog = None;
+        let _ = app.run("account.addSharedMailbox", json!({}));
+        assert!(
+            matches!(&app.dialog, Some(crate::dialogs::Dialog::SharedMailbox { account, .. }) if *account == expected),
+            "under {expected}: {:?}",
+            app.dialog.as_ref().map(|_| "another dialog")
+        );
+    }
+    // A folder of an account that can't have one (a local one): the first that can.
+    let local = app.execute("account.add", json!({"email": "ada@example.org"})).unwrap()["id"].as_u64().unwrap();
+    let inbox = app.session.mailbox.folder_of_kind(local, FolderKind::Inbox).unwrap();
+    app.execute("folder.select", json!({"id": inbox})).unwrap();
+    app.dialog = None;
+    let _ = app.run("account.addSharedMailbox", json!({}));
+    assert!(matches!(&app.dialog, Some(crate::dialogs::Dialog::SharedMailbox { account, .. }) if *account == owner));
+    no_imap();
+}
+
+/// With a shared mailbox's folder in view, the ribbon's button opens the dialog under the
+/// account it is opened through.
+#[test]
+fn the_ribbon_opens_it_under_the_owner_when_a_shared_mailbox_is_in_view() {
+    let (mut app, _, _, _, _) = window();
+    let second = app.execute("account.add", json!({"email": "lena@example.org", "kind": "microsoft"})).unwrap()["id"].as_u64().unwrap();
+    let shared = app.execute("account.addSharedMailbox", json!({"account": second, "address": SHARED})).unwrap()["id"].as_u64().unwrap();
+    let inbox = app.session.mailbox.folder_of_kind(shared, FolderKind::Inbox).unwrap();
+    app.execute("folder.select", json!({"id": inbox})).unwrap();
+    app.dialog = None;
+    let _ = app.run("account.addSharedMailbox", json!({}));
+    assert!(matches!(&app.dialog, Some(crate::dialogs::Dialog::SharedMailbox { account, .. }) if *account == second));
+    no_imap();
+}
+
+/// For a mailbox whose only Microsoft account is a personal one, the button is greyed and its
+/// click opens nothing: the command's own rule says no, as the window's does.
+#[test]
+fn the_ribbon_button_is_greyed_for_an_outlook_com_only_mailbox() {
+    let mut app = MailApp::new(Session::empty(), Services::default());
+    app.autosave = false;
+    app.execute("account.add", json!({"email": "ada@example.org"})).unwrap();
+    app.execute("account.add", json!({"email": "ada@outlook.com", "kind": "microsoft", "auth": "oauth2"})).unwrap();
+    let tab = crate::ribbon::describe_tab(&app, "Folder");
+    let item = tab.items().find(|i| i.command.as_ref().is_some_and(|(c, _)| *c == "account.addSharedMailbox")).unwrap();
+    assert!(!crate::ribbon::usable(&app, item), "greyed");
+    assert!(!app.enabled("account.addSharedMailbox"));
+    let _ = app.run("account.addSharedMailbox", json!({}));
+    assert!(!matches!(app.dialog, Some(crate::dialogs::Dialog::SharedMailbox { .. })), "no dialog");
+    assert!(app.session.mailbox.accounts.iter().all(|a| !a.is_shared()));
+}

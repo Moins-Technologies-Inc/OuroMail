@@ -1,0 +1,1 @@
+| 2026-11-21 | minor | Folder pane: Add Shared Mailbox… on a work or school Microsoft account's right-click menu and in Folder › New (greyed only where no account can have one, such as a mailbox whose only Microsoft account is a personal one); Remove Shared Mailbox… on a shared mailbox's heading |

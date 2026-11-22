@@ -934,13 +934,23 @@ msgstr "Afzender toevoegen"
 msgid "Add Sender to Contacts"
 msgstr "Afzender toevoegen aan contactpersonen"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"Gedeeld postvak\n"
+"toevoegen"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 msgid "Add Shared Mailbox"
 msgstr "Gedeeld postvak toevoegen"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "Gedeeld postvak toevoegen…"
@@ -12872,6 +12882,12 @@ msgstr "Gedeelde agenda verwijderen"
 msgid "Remove Shared Mailbox"
 msgstr "Gedeeld postvak verwijderen"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "Gedeeld postvak verwijderen…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -22520,8 +22536,8 @@ msgstr "gedeeld postvak"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "gedeelde postvakken worden geopend onder een via Microsoft Graph bijgehouden account"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "gedeelde postvakken worden geopend onder een via Microsoft Graph bijgehouden werk- of schoolaccount"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -26180,6 +26196,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Regels"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "gedeelde postvakken worden geopend onder een via Microsoft Graph bijgehouden account"
 
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
 #~ msgstr "Op Wayland moet u MailCraft opnieuw starten na het inschakelen van deze optie. Een bereikbare X11- of XWayland-server en een systeemvak zijn nodig."

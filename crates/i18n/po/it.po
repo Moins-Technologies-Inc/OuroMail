@@ -955,6 +955,16 @@ msgstr "Aggiungi mittente"
 msgid "Add Sender to Contacts"
 msgstr "Aggiungi mittente ai contatti"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"Aggiungi cassetta\n"
+"postale condivisa"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -962,7 +972,7 @@ msgid "Add Shared Mailbox"
 msgstr "Aggiungi cassetta postale condivisa"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "Aggiungi cassetta postale condivisa…"
@@ -13307,6 +13317,12 @@ msgstr "Rimuovi calendario condiviso"
 msgid "Remove Shared Mailbox"
 msgstr "Rimuovi cassetta postale condivisa"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "Rimuovi cassetta postale condivisa…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -23113,8 +23129,8 @@ msgstr "cassetta postale condivisa"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "le cassette postali condivise si aprono sotto un account sincronizzato tramite Microsoft Graph"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "le cassette postali condivise si aprono sotto un account di lavoro o scuola sincronizzato tramite Microsoft Graph"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -26777,6 +26793,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Righe"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "le cassette postali condivise si aprono sotto un account sincronizzato tramite Microsoft Graph"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."

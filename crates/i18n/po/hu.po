@@ -959,6 +959,16 @@ msgstr "Feladó hozzáadása"
 msgid "Add Sender to Contacts"
 msgstr "Feladó hozzáadása a névjegyekhez"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"Megosztott postafiók\n"
+"hozzáadása"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -966,7 +976,7 @@ msgid "Add Shared Mailbox"
 msgstr "Megosztott postafiók hozzáadása"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "Megosztott postafiók hozzáadása…"
@@ -13313,6 +13323,12 @@ msgstr "Megosztott naptár eltávolítása"
 msgid "Remove Shared Mailbox"
 msgstr "Megosztott postafiók eltávolítása"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "Megosztott postafiók eltávolítása…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -23133,8 +23149,8 @@ msgstr "megosztott postafiók"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "megosztott postafiókok nyithatók egy Microsoft Graph-on keresztül vezetett fiók alatt"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "megosztott postafiókok egy Microsoft Graph-on keresztül vezetett munkahelyi vagy iskolai fiók alatt nyithatók"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -26801,6 +26817,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Sorok"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "megosztott postafiókok nyithatók egy Microsoft Graph-on keresztül vezetett fiók alatt"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."

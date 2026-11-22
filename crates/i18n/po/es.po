@@ -955,6 +955,16 @@ msgstr "Agregar remitente"
 msgid "Add Sender to Contacts"
 msgstr "Agregar remitente a Contactos"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"Agregar buzón\n"
+"compartido"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -962,7 +972,7 @@ msgid "Add Shared Mailbox"
 msgstr "Agregar buzón compartido"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "Agregar buzón compartido…"
@@ -13322,6 +13332,12 @@ msgstr "Quitar calendario compartido"
 msgid "Remove Shared Mailbox"
 msgstr "Quitar buzón compartido"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "Quitar buzón compartido…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -23138,8 +23154,8 @@ msgstr "buzón compartido"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "los buzones compartidos se abren con una cuenta sincronizada a través de Microsoft Graph"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "los buzones compartidos se abren con una cuenta profesional o educativa sincronizada a través de Microsoft Graph"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -26802,6 +26818,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Líneas"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "los buzones compartidos se abren con una cuenta sincronizada a través de Microsoft Graph"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."

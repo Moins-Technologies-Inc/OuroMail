@@ -854,6 +854,13 @@ impl Account {
         self.shared_of.is_some()
     }
 
+    /// Whether a shared mailbox may be opened under it (#70): a Microsoft account kept in step
+    /// through Graph, of a work or school (not a personal Microsoft account, which has none), and
+    /// no shared mailbox itself. The one rule for the command, the window's offers and the host.
+    pub fn can_open_shared(&self) -> bool {
+        self.kind == AccountKind::Microsoft && !self.is_shared() && self.oauth.as_ref().is_none_or(|oauth| !oauth.is_personal(&self.email))
+    }
+
     /// Whether Microsoft keeps its to-dos: it signs in with Microsoft and is not a shared mailbox.
     pub fn keeps_tasks(&self) -> bool {
         !self.is_shared() && self.kind != AccountKind::Jmap && self.oauth.as_ref().is_some_and(|o| o.provider == OAuthProvider::Microsoft)

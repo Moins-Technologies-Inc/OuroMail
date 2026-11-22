@@ -956,6 +956,16 @@ msgstr "添加发件人"
 msgid "Add Sender to Contacts"
 msgstr "将发件人添加到联系人"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"添加共享\n"
+"邮箱"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -963,7 +973,7 @@ msgid "Add Shared Mailbox"
 msgstr "添加共享邮箱"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "添加共享邮箱…"
@@ -13313,6 +13323,12 @@ msgstr "移除共享日历"
 msgid "Remove Shared Mailbox"
 msgstr "移除共享邮箱"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "移除共享邮箱…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -23114,8 +23130,8 @@ msgstr "共享邮箱"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "请在通过 Microsoft Graph 同步的账户下打开共享邮箱"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "请在通过 Microsoft Graph 同步的工作或学校账户下打开共享邮箱"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -26656,6 +26672,10 @@ msgstr "−二进制"
 #, fuzzy
 msgid "−Lines"
 msgstr "−行"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "请在通过 Microsoft Graph 同步的账户下打开共享邮箱"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."

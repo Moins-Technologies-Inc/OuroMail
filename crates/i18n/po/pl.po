@@ -956,6 +956,16 @@ msgstr "Dodaj nadawcę"
 msgid "Add Sender to Contacts"
 msgstr "Dodaj nadawcę do kontaktów"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"Dodaj udostępnioną\n"
+"skrzynkę pocztową"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -963,7 +973,7 @@ msgid "Add Shared Mailbox"
 msgstr "Dodaj udostępnioną skrzynkę pocztową"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "Dodaj udostępnioną skrzynkę pocztową…"
@@ -13360,6 +13370,12 @@ msgstr "Usuń kalendarz udostępniony"
 msgid "Remove Shared Mailbox"
 msgstr "Usuń udostępnioną skrzynkę pocztową"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "Usuń udostępnioną skrzynkę pocztową…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -23223,8 +23239,8 @@ msgstr "skrzynka współdzielona"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "udostępnione skrzynki pocztowe otwierają się na koncie synchronizowanym przez Microsoft Graph"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "udostępnione skrzynki pocztowe otwierają się na koncie służbowym lub szkolnym synchronizowanym przez Microsoft Graph"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -27017,6 +27033,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Wiersze"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "udostępnione skrzynki pocztowe otwierają się na koncie synchronizowanym przez Microsoft Graph"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."

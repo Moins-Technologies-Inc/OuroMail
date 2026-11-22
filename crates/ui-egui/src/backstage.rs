@@ -331,7 +331,7 @@ fn info(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
         }
         // A mailbox of the organisation that the owner was given Full Access to (#70).
         // (Not for a personal Microsoft account, which has none.)
-        if crate::shared_mailboxes::can_open_shared(a) {
+        if a.can_open_shared() {
             ui.horizontal(|ui| {
                 ui.add_space(12.0);
                 let link = ui.link(tl!("Add Shared Mailbox…")).on_hover_text(tl!(

@@ -44,7 +44,7 @@
 //! asked, by itself, for `Calendars.ReadWrite.Shared`. They are only shown and read here: a change
 //! to one is refused, and none of them raises a reminder (they are the mailbox's, not the owner's).
 
-use mailcraft_model::{AccountKind, FolderKind, Id};
+use mailcraft_model::{Account, FolderKind, Id};
 use serde_json::{Value, json};
 
 use super::{bad, fail};
@@ -64,11 +64,14 @@ pub fn specs() -> Vec<CommandSpec> {
     ]
 }
 
+/// Whether the mailbox has an account a shared mailbox can be opened under: the window's rule
+/// ([`mailcraft_model::Account::can_open_shared`]), so that a control that follows the command is
+/// never lit for a mailbox whose only Microsoft account is a personal one.
 fn has_owner(s: &Session) -> Option<&'static str> {
-    if s.mailbox.accounts.iter().any(|a| a.kind == AccountKind::Microsoft && !a.is_shared()) {
+    if s.mailbox.accounts.iter().any(Account::can_open_shared) {
         None
     } else {
-        Some("shared mailboxes open under an account kept in step through Microsoft Graph")
+        Some("shared mailboxes open under a work or school account kept in step through Microsoft Graph")
     }
 }
 
@@ -77,7 +80,7 @@ fn has_shared(s: &Session) -> Option<&'static str> {
 }
 
 /// The account a command means to open a shared mailbox under: the one it names, else the first
-/// Microsoft account that is no shared mailbox itself.
+/// that can have one ([`mailcraft_model::Account::can_open_shared`]).
 fn owner(s: &Session, v: &Value) -> Result<Id, CmdError> {
     match p::id(v, "account") {
         Some(id) => s.mailbox.account(id).map(|a| a.id).ok_or_else(|| failed!("no account with id {id}", id)),
@@ -85,9 +88,9 @@ fn owner(s: &Session, v: &Value) -> Result<Id, CmdError> {
             .mailbox
             .accounts
             .iter()
-            .find(|a| a.kind == AccountKind::Microsoft && !a.is_shared())
+            .find(|a| a.can_open_shared())
             .map(|a| a.id)
-            .ok_or_else(|| fail("shared mailboxes open under an account kept in step through Microsoft Graph")),
+            .ok_or_else(|| fail("shared mailboxes open under a work or school account kept in step through Microsoft Graph")),
     }
 }
 

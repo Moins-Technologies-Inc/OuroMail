@@ -956,6 +956,16 @@ msgstr "Adăugare expeditor"
 msgid "Add Sender to Contacts"
 msgstr "Adăugare expeditor la Contacte"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"Adăugare cutie\n"
+"poștală partajată"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -963,7 +973,7 @@ msgid "Add Shared Mailbox"
 msgstr "Adăugare cutie poștală partajată"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "Adăugare cutie poștală partajată…"
@@ -13356,6 +13366,12 @@ msgstr "Eliminare calendar partajat"
 msgid "Remove Shared Mailbox"
 msgstr "Eliminare cutie poștală partajată"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "Eliminare cutie poștală partajată…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -23216,8 +23232,8 @@ msgstr "cutie poștală partajată"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "cutiile poștale partajate se deschid sub un cont sincronizat prin Microsoft Graph"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "cutiile poștale partajate se deschid sub un cont de serviciu sau de școală sincronizat prin Microsoft Graph"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -27010,6 +27026,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Linii"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "cutiile poștale partajate se deschid sub un cont sincronizat prin Microsoft Graph"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."

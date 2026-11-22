@@ -952,6 +952,16 @@ msgstr "Ajouter l’expéditeur"
 msgid "Add Sender to Contacts"
 msgstr "Ajouter l'expéditeur aux contacts"
 
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"Ajouter une boîte\n"
+"aux lettres partagée"
+
 #. command label, interface
 #: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
 #, fuzzy
@@ -959,7 +969,7 @@ msgid "Add Shared Mailbox"
 msgstr "Ajouter une boîte aux lettres partagée"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "Ajouter une boîte aux lettres partagée…"
@@ -13261,6 +13271,12 @@ msgstr "Supprimer le calendrier partagé"
 msgid "Remove Shared Mailbox"
 msgstr "Supprimer la boîte aux lettres partagée"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "Supprimer la boîte aux lettres partagée…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -23041,8 +23057,8 @@ msgstr "boîte aux lettres partagée"
 #. what a command says, why a command can't run
 #: crates/engine/src/cmd/shared.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "les boîtes aux lettres partagées s'ouvrent sous un compte synchronisé via Microsoft Graph"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "les boîtes aux lettres partagées s'ouvrent sous un compte professionnel ou scolaire synchronisé via Microsoft Graph"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -26704,6 +26720,10 @@ msgstr "−Bin"
 #, fuzzy
 msgid "−Lines"
 msgstr "−Lignes"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "les boîtes aux lettres partagées s'ouvrent sous un compte synchronisé via Microsoft Graph"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."
