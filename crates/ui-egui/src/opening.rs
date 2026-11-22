@@ -376,7 +376,7 @@ pub(crate) fn show(app: &mut MailApp, ui: &mut Ui) {
         ui.scope_builder(egui::UiBuilder::new().max_rect(column), |ui| {
             ui.vertical_centered(|ui| {
                 let (mark_rect, _) = ui.allocate_exact_size(vec2(72.0, 72.0), egui::Sense::hover());
-                if let Some(logo) = logo(ui.ctx()) {
+                if let Some(logo) = logo(ui.ctx(), t.dark) {
                     egui::Image::new(&logo).fit_to_exact_size(mark_rect.size()).paint_at(ui, mark_rect);
                 }
                 ui.add_space(22.0);
@@ -456,18 +456,27 @@ fn problem(ui: &mut Ui, t: &Tokens, trouble: Option<&Trouble>) -> bool {
     crate::widgets::primary_button(ui, tl!("Continue"), true).clicked()
 }
 
-/// OuroMail's logo, the app icon itself, as a texture made once and kept in the context.
-/// `None` when the picture can't be read (the screen then shows no mark).
-pub(crate) fn logo(ctx: &egui::Context) -> Option<egui::TextureHandle> {
-    /// The 256 px icon every build ships (`assets/app-icon`, attributed in `ATTRIBUTION.md`).
-    const PNG: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/tech.moins.ouromail.png");
-    let id = egui::Id::unique("mailcraft-opening-logo");
+/// The 256 px opening-screen icon bytes for the active theme: light artwork on a dark canvas,
+/// dark artwork on a light canvas (`assets/app-icon`, attributed in `ATTRIBUTION.md`).
+const fn logo_png(dark: bool) -> &'static [u8] {
+    if dark {
+        include_bytes!("../../../assets/app-icon/ouromail-light-256.png")
+    } else {
+        include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/tech.moins.ouromail.png")
+    }
+}
+
+/// OuroMail's logo, the app icon itself, as a texture made once per theme polarity and kept in
+/// the context. `None` when the picture can't be read (the screen then shows no mark).
+pub(crate) fn logo(ctx: &egui::Context, dark: bool) -> Option<egui::TextureHandle> {
+    let key = if dark { "mailcraft-opening-logo-light" } else { "mailcraft-opening-logo-dark" };
+    let id = egui::Id::unique(key);
     if let Some(texture) = ctx.data(|d| d.get_temp::<egui::TextureHandle>(id)) {
         return Some(texture);
     }
-    let rgba = image::load_from_memory_with_format(PNG, image::ImageFormat::Png).ok()?.into_rgba8();
+    let rgba = image::load_from_memory_with_format(logo_png(dark), image::ImageFormat::Png).ok()?.into_rgba8();
     let size = [usize::try_from(rgba.width()).ok()?, usize::try_from(rgba.height()).ok()?];
-    let texture = ctx.load_texture("mailcraft-logo", egui::ColorImage::from_rgba_unmultiplied(size, rgba.as_raw()), egui::TextureOptions::LINEAR);
+    let texture = ctx.load_texture(key, egui::ColorImage::from_rgba_unmultiplied(size, rgba.as_raw()), egui::TextureOptions::LINEAR);
     ctx.data_mut(|d| d.insert_temp(id, texture.clone()));
     Some(texture)
 }

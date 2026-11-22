@@ -31,3 +31,35 @@ fn the_title_row_is_compact_and_the_tabs_follow_it() {
         assert!((40.0..46.0).contains(&below), "{theme}: New Email {below} points under the row");
     }
 }
+
+fn mean_opaque_luminance(png: &[u8]) -> f64 {
+    let rgba = image::load_from_memory_with_format(png, image::ImageFormat::Png).unwrap().into_rgba8();
+    let (sum, count) = rgba.pixels().fold((0.0f64, 0u64), |(sum, count), p| {
+        if p[3] >= 128 {
+            let lum = 0.2126 * f64::from(p[0]) + 0.7152 * f64::from(p[1]) + 0.0722 * f64::from(p[2]);
+            (sum + lum, count + 1)
+        } else {
+            (sum, count)
+        }
+    });
+    assert!(count > 0, "icon must have opaque pixels");
+    sum / count as f64
+}
+
+#[test]
+fn title_icon_switches_with_theme_and_uses_light_artwork_in_dark_mode() {
+    let ctx = egui::Context::default();
+    let light_mode = super::title_icon(&ctx, false).expect("light-mode title icon is built in");
+    let dark_mode = super::title_icon(&ctx, true).expect("dark-mode title icon is built in");
+    assert_eq!(light_mode.size(), [64, 64]);
+    assert_eq!(dark_mode.size(), [64, 64]);
+    assert_ne!(light_mode.id(), dark_mode.id(), "dark and light modes must cache distinct title icons");
+    assert_eq!(super::title_icon(&ctx, false).unwrap().id(), light_mode.id());
+    assert_eq!(super::title_icon(&ctx, true).unwrap().id(), dark_mode.id());
+    let lum_dark_mode = mean_opaque_luminance(super::title_icon_png(true));
+    let lum_light_mode = mean_opaque_luminance(super::title_icon_png(false));
+    assert!(
+        lum_dark_mode > lum_light_mode,
+        "dark mode must use the lighter title icon (dark_mode={lum_dark_mode:.2} vs light_mode={lum_light_mode:.2})"
+    );
+}

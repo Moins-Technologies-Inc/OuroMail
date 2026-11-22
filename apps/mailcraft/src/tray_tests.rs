@@ -113,22 +113,165 @@ fn reading_or_filing_the_last_inbox_mail_clears_the_badge_despite_other_unread_m
     assert!(has_unread(&mut session), "undoing the move restores the unread Inbox message");
 }
 
+fn mean_opaque_luminance(icon: &egui::IconData) -> f64 {
+    let (sum, count) = icon.rgba.as_chunks::<4>().0.iter().fold((0.0f64, 0u64), |(sum, count), &[r, g, b, a]| {
+        if a >= 128 {
+            let lum = 0.2126 * f64::from(r) + 0.7152 * f64::from(g) + 0.0722 * f64::from(b);
+            (sum + lum, count + 1)
+        } else {
+            (sum, count)
+        }
+    });
+    assert!(count > 0, "icon must have opaque pixels");
+    sum / count as f64
+}
+
 #[test]
 fn badge_is_a_red_circle_in_the_top_left_and_does_not_change_the_rest_of_the_icon() {
-    let [plain, badged] = icons().unwrap();
-    assert_eq!((plain.width, plain.height, plain.rgba.len()), (badged.width, badged.height, badged.rgba.len()));
-    let mut changed = 0;
-    for (i, (before, after)) in plain.rgba.as_chunks::<4>().0.iter().zip(badged.rgba.as_chunks::<4>().0).enumerate() {
-        if before != after {
-            changed += 1;
-            assert!(i % (plain.width as usize) < plain.width as usize / 2);
-            assert!(i / (plain.width as usize) < plain.height as usize / 2);
+    for dark in [false, true] {
+        let [plain, badged] = icons_for(dark).unwrap();
+        assert_eq!((plain.width, plain.height, plain.rgba.len()), (badged.width, badged.height, badged.rgba.len()));
+        let mut changed = 0;
+        for (i, (before, after)) in plain.rgba.as_chunks::<4>().0.iter().zip(badged.rgba.as_chunks::<4>().0).enumerate() {
+            if before != after {
+                changed += 1;
+                assert!(i % (plain.width as usize) < plain.width as usize / 2);
+                assert!(i / (plain.width as usize) < plain.height as usize / 2);
+            }
         }
+        assert!(changed > 0, "dark={dark}");
+        let center = (plain.width.min(plain.height) as f32 * 0.20) as usize;
+        let pixel = (center * plain.width as usize + center) * 4;
+        assert_eq!(badged.rgba.get(pixel..pixel + 4), Some([230, 40, 55, 255].as_slice()), "dark={dark}");
     }
-    assert!(changed > 0);
-    let center = (plain.width.min(plain.height) as f32 * 0.20) as usize;
-    let pixel = (center * plain.width as usize + center) * 4;
-    assert_eq!(badged.rgba.get(pixel..pixel + 4), Some([230, 40, 55, 255].as_slice()));
+}
+
+#[test]
+fn dark_mode_tray_icon_is_brighter_than_light_mode_tray_icon() {
+    let [[light_plain, light_badged], [dark_plain, dark_badged]] = all_icons().unwrap();
+    assert_eq!((light_plain.width, light_plain.height), (64, 64));
+    assert_eq!((dark_plain.width, dark_plain.height), (64, 64));
+    assert_ne!(light_plain.rgba, dark_plain.rgba);
+    assert_ne!(light_badged.rgba, dark_badged.rgba);
+    let lum_dark_mode = mean_opaque_luminance(&dark_plain);
+    let lum_light_mode = mean_opaque_luminance(&light_plain);
+    assert!(
+        lum_dark_mode > lum_light_mode,
+        "dark mode must use the lighter tray icon (dark_mode={lum_dark_mode:.2} vs light_mode={lum_light_mode:.2})"
+    );
+}
+
+#[test]
+fn dark_mode_app_icon_is_brighter_than_light_mode_app_icon() {
+    let light_mode = crate::app_icon_for(false).expect("light-mode app icon is built in");
+    let dark_mode = crate::app_icon_for(true).expect("dark-mode app icon is built in");
+    let expected_side = if cfg!(target_os = "macos") { 512 } else { 256 };
+    assert_eq!((light_mode.width, light_mode.height), (expected_side, expected_side));
+    assert_eq!((dark_mode.width, dark_mode.height), (expected_side, expected_side));
+    assert_ne!(light_mode.rgba, dark_mode.rgba);
+    let lum_dark_mode = mean_opaque_luminance(&dark_mode);
+    let lum_light_mode = mean_opaque_luminance(&light_mode);
+    assert!(
+        lum_dark_mode > lum_light_mode,
+        "dark mode must use the lighter app icon (dark_mode={lum_dark_mode:.2} vs light_mode={lum_light_mode:.2})"
+    );
+}
+
+#[test]
+fn window_icon_sync_sends_icon_only_when_theme_changes() {
+    let ctx = Context::default();
+    let mut app = MailApp::new(mailcraft_engine::Session::empty(), mailcraft_ui_egui::Services::default());
+    app.services.window_identity =
+        Some(mailcraft_ui_egui::windows::WindowIdentity { icon: crate::app_icon_for(false).map(Arc::new), app_id: Some(crate::APP_ID.into()) });
+    let mut icon = crate::WindowIcon::new(Some(false));
+    let light_rgba = crate::app_icon_for(false).unwrap().rgba;
+    let dark_rgba = crate::app_icon_for(true).unwrap().rgba;
+
+    ctx.set_visuals(egui::Visuals::light());
+    let out = ctx.run_logic(&egui::RawInput::default(), |ctx| icon.sync(ctx, &mut app));
+    let cmds = out.viewport_commands.get(&egui::ViewportId::ROOT).cloned().unwrap_or_default();
+    assert!(!cmds.iter().any(|c| matches!(c, ViewportCommand::Icon(_))), "no icon command when already light");
+
+    ctx.set_visuals(egui::Visuals::dark());
+    let out = ctx.run_logic(&egui::RawInput::default(), |ctx| icon.sync(ctx, &mut app));
+    let cmds = out.viewport_commands.get(&egui::ViewportId::ROOT).cloned().unwrap_or_default();
+    let sent: Vec<_> = cmds
+        .iter()
+        .filter_map(|c| match c {
+            ViewportCommand::Icon(i) => Some(i.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(sent.len(), 1, "switching to dark must emit ViewportCommand::Icon once");
+    assert_eq!(sent[0].as_ref().unwrap().rgba, dark_rgba);
+    assert_eq!(app.services.window_identity.as_ref().unwrap().icon.as_ref().unwrap().rgba, dark_rgba);
+
+    // Repeating a dark frame must not resend.
+    let out = ctx.run_logic(&egui::RawInput::default(), |ctx| icon.sync(ctx, &mut app));
+    let cmds = out.viewport_commands.get(&egui::ViewportId::ROOT).cloned().unwrap_or_default();
+    assert!(!cmds.iter().any(|c| matches!(c, ViewportCommand::Icon(_))), "steady dark mode must not resend icon");
+
+    // Switching back to light emits the dark icon once.
+    ctx.set_visuals(egui::Visuals::light());
+    let out = ctx.run_logic(&egui::RawInput::default(), |ctx| icon.sync(ctx, &mut app));
+    let cmds = out.viewport_commands.get(&egui::ViewportId::ROOT).cloned().unwrap_or_default();
+    let sent: Vec<_> = cmds
+        .iter()
+        .filter_map(|c| match c {
+            ViewportCommand::Icon(i) => Some(i.clone()),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(sent.len(), 1, "switching back to light must emit ViewportCommand::Icon once");
+    assert_eq!(sent[0].as_ref().unwrap().rgba, light_rgba);
+    assert_eq!(app.services.window_identity.as_ref().unwrap().icon.as_ref().unwrap().rgba, light_rgba);
+}
+
+#[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly"))]
+#[test]
+fn tray_unix_item_pixmap_switches_with_dark_mode_for_plain_and_badged() {
+    use ksni::Tray as _;
+    let signals = Arc::new(Signals { pending: AtomicU8::new(0), online: AtomicBool::new(false), ctx: Context::default() });
+    let mut item = backend::make_item(signals).unwrap();
+    let [[light_plain, light_badged], [dark_plain, dark_badged]] = all_icons().unwrap();
+
+    item.dark = false;
+    item.badged = false;
+    let lp = item.icon_pixmap()[0].data.clone();
+    assert_eq!(lp, backend::sni_icon(light_plain).unwrap().data);
+
+    item.dark = true;
+    let dp = item.icon_pixmap()[0].data.clone();
+    assert_eq!(dp, backend::sni_icon(dark_plain).unwrap().data);
+    assert_ne!(lp, dp, "plain tray pixmap must change when dark flips");
+
+    item.dark = false;
+    item.badged = true;
+    let lb = item.icon_pixmap()[0].data.clone();
+    assert_eq!(lb, backend::sni_icon(light_badged).unwrap().data);
+
+    item.dark = true;
+    let db = item.icon_pixmap()[0].data.clone();
+    assert_eq!(db, backend::sni_icon(dark_badged).unwrap().data);
+    assert_ne!(lb, db, "badged tray pixmap must change when dark flips");
+    assert_ne!(dp, db, "dark-mode badged pixmap must differ from dark-mode plain");
+    assert_ne!(lp, lb, "light-mode badged pixmap must differ from light-mode plain");
+
+    // And Tray::pump forwards ctx's dark_mode to the backend.
+    let ctx = Context::default();
+    let mut tray = Tray::new(&ctx, true);
+    tray.configure(true, |s| {
+        s.online(true);
+        backend::Backend::stand_in()
+    });
+    let mut app = MailApp::new(mailcraft_engine::Session::empty(), mailcraft_ui_egui::Services::default());
+    app.ui.close_to_tray = true;
+    ctx.set_visuals(egui::Visuals::light());
+    tray.pump(&ctx, &mut app);
+    assert!(!tray.backend.as_ref().unwrap().dark());
+    ctx.set_visuals(egui::Visuals::dark());
+    tray.pump(&ctx, &mut app);
+    assert!(tray.backend.as_ref().unwrap().dark());
 }
 
 #[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly"))]

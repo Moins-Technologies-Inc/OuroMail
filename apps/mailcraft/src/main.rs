@@ -134,10 +134,36 @@ use mailcraft_ui_egui::{
     window_geometry::{self, WindowGeometry, take_rescue},
 };
 
+/// Keeps the main window's icon (and secondary windows' identity) in step with the active theme,
+/// sending `ViewportCommand::Icon` once per change and never on every frame.
+struct WindowIcon {
+    last_dark: Option<bool>,
+}
+
+impl WindowIcon {
+    fn new(initial_dark: Option<bool>) -> Self {
+        Self { last_dark: initial_dark }
+    }
+
+    fn sync(&mut self, ctx: &egui::Context, app: &mut MailApp) {
+        let dark = ctx.global_style().visuals.dark_mode;
+        if self.last_dark == Some(dark) {
+            return;
+        }
+        self.last_dark = Some(dark);
+        let icon = app_icon_for(dark).map(std::sync::Arc::new);
+        if let Some(identity) = &mut app.services.window_identity {
+            identity.icon = icon.clone();
+        }
+        ctx.send_viewport_cmd(egui::ViewportCommand::Icon(icon));
+    }
+}
+
 /// The app, the restored window geometry until the first frame has checked it, the control
 /// server's key file (removed on exit), the file dialogs the app asked for, the hold on the
 /// mailbox that later starts hand their files and links to, a copy that updates itself's part in
-/// that (installing at exit) and, on macOS, the files opened from Finder and the menu bar.
+/// that (installing at exit), the tray, the theme-adaptive window icon and, on macOS, the files
+/// opened from Finder and the menu bar.
 struct App(
     MailApp,
     Option<WindowGeometry>,
@@ -146,6 +172,7 @@ struct App(
     Option<single_instance::Guard>,
     Option<HostUpdates>,
     tray::Tray,
+    WindowIcon,
     #[cfg(target_os = "macos")] fmv_macos_events::Inbox,
     #[cfg(target_os = "macos")] Option<menubar::MenuBar>,
 );
@@ -178,7 +205,7 @@ impl HostUpdates {
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         #[cfg(target_os = "macos")]
-        apple_events::poll(&self.7, &mut self.0, ctx);
+        apple_events::poll(&self.8, &mut self.0, ctx);
         // MailCraft was started again (the shortcut, a `mailto:` link, a file opened from the
         // file manager): what it was started with opens here, and the window comes forward.
         if let Some(asked) = self.4.as_ref().and_then(single_instance::Guard::handed_over) {
@@ -193,10 +220,11 @@ impl eframe::App for App {
         }
         // The menu bar's choices run before the frame's own work (macOS).
         #[cfg(target_os = "macos")]
-        if let Some(bar) = &mut self.8 {
+        if let Some(bar) = &mut self.9 {
             bar.pump(&mut self.0, ctx);
         }
         self.0.logic(ctx);
+        self.7.sync(ctx, &mut self.0);
         // Another mailbox file opened in the window (or File › New): the lock follows it (#517).
         if let Some(guard) = &self.4
             && !self.0.is_opening()
@@ -1431,19 +1459,49 @@ fn update_download(
 /// (`packaging/linux/tech.moins.ouromail.desktop`).
 const APP_ID: &str = "tech.moins.ouromail";
 
-/// Window, Dock and taskbar icon: OuroMail's (`assets/app-icon`, attributed in `ATTRIBUTION.md`).
-fn app_icon() -> Option<egui::IconData> {
+/// Whether the window starts in dark mode, from saved preferences and the desktop theme when
+/// already known (`desktop_theme`), else light.
+fn initial_dark(prefs: Option<&UiState>) -> bool {
+    #[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly"))]
+    let system = DESKTOP_THEME.get().and_then(desktop_theme::DesktopTheme::get);
+    #[cfg(not(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly")))]
+    let system = None;
+    prefs.map_or_else(Default::default, |ui| ui.theme).preference(system) == egui::ThemePreference::Dark
+}
+
+/// Window, Dock and taskbar icon for the active theme: light artwork on dark mode, dark artwork
+/// on light mode (`assets/app-icon`, attributed in `ATTRIBUTION.md`).
+pub(crate) fn app_icon_for(dark: bool) -> Option<egui::IconData> {
     #[cfg(target_os = "macos")]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/512x512/apps/tech.moins.ouromail.png");
+    let png: &[u8] = if dark {
+        include_bytes!("../../../assets/app-icon/ouromail-light-512.png")
+    } else {
+        include_bytes!("../../../assets/app-icon/hicolor/512x512/apps/tech.moins.ouromail.png")
+    };
     #[cfg(not(target_os = "macos"))]
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/tech.moins.ouromail.png");
+    let png: &[u8] = if dark {
+        include_bytes!("../../../assets/app-icon/ouromail-light-256.png")
+    } else {
+        include_bytes!("../../../assets/app-icon/hicolor/256x256/apps/tech.moins.ouromail.png")
+    };
     eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("app icon: {e}")).ok()
 }
 
-/// The system tray's icon: OuroMail's bolder drawing for small sizes, 64 pixels, which the
-/// unread badge is drawn into (`tray`) and the tray scales down to its own 16 to 32.
-pub(crate) fn tray_icon() -> Option<egui::IconData> {
-    let png: &[u8] = include_bytes!("../../../assets/app-icon/ouromail-tray-64.png");
+/// Window, Dock and taskbar icon at startup, from the saved theme preference (and desktop theme
+/// when available).
+fn app_icon(prefs: Option<&UiState>) -> Option<egui::IconData> {
+    app_icon_for(initial_dark(prefs))
+}
+
+/// The system tray's icon for the active theme, 64 pixels, which the unread badge is drawn into
+/// (`tray`) and the tray scales down to its own 16 to 32: light artwork on dark mode, dark artwork
+/// on light mode.
+pub(crate) fn tray_icon_for(dark: bool) -> Option<egui::IconData> {
+    let png: &[u8] = if dark {
+        include_bytes!("../../../assets/app-icon/ouromail-tray-64.png")
+    } else {
+        include_bytes!("../../../assets/app-icon/ouromail-tray-dark-64.png")
+    };
     eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("tray icon: {e}")).ok()
 }
 
@@ -1660,9 +1718,6 @@ fn main() -> eframe::Result {
             .with_title_shown(false),
         ..Default::default()
     };
-    if let Some(icon) = app_icon() {
-        options.viewport = options.viewport.with_icon(icon);
-    }
     // Under Wayland the window layer's clipboard can't see a picture or HTML (in the Flatpak it
     // has no clipboard of its own at all): the clipboard keys are handled by `mailcraft_ui_egui::paste_keys` (#1217).
     #[cfg(any(target_os = "linux", target_os = "freebsd"))]
@@ -1679,6 +1734,10 @@ fn main() -> eframe::Result {
     #[cfg(target_os = "windows")]
     graphics::configure(&mut options, eframe::wgpu::Backends::from_env());
     let (prefs, settings_unread) = load_prefs();
+    let start_dark = initial_dark(prefs.as_ref());
+    if let Some(icon) = app_icon(prefs.as_ref()) {
+        options.viewport = options.viewport.with_icon(icon);
+    }
     let close_to_tray = prefs.as_ref().is_some_and(|ui| ui.close_to_tray);
     let restored = prefs.as_ref().and_then(|ui| ui.window).and_then(WindowGeometry::sanitized);
     if let Some(window) = restored {
@@ -1739,8 +1798,10 @@ fn main() -> eframe::Result {
                 // A run that keeps its mailbox and its settings keeps downloaded pictures too.
                 let kept_pictures = if kept && !sample && prefs_enabled() { keep_pictures() } else { None };
                 let mut services = services(file_dialog, ctx.clone(), kept_pictures, host_updates.as_ref());
-                services.window_identity =
-                    Some(mailcraft_ui_egui::windows::WindowIdentity { icon: app_icon().map(std::sync::Arc::new), app_id: Some(APP_ID.into()) });
+                services.window_identity = Some(mailcraft_ui_egui::windows::WindowIdentity {
+                    icon: app_icon_for(ctx.global_style().visuals.dark_mode).map(std::sync::Arc::new),
+                    app_id: Some(APP_ID.into()),
+                });
                 // Under Wayland the clipboard goes through the window's own connection (#1217).
                 #[cfg(any(target_os = "linux", target_os = "freebsd"))]
                 {
@@ -1847,6 +1908,7 @@ fn main() -> eframe::Result {
                 guard,
                 updates,
                 tray::Tray::new(&cc.egui_ctx, tray::can_hide(cc)),
+                WindowIcon::new(Some(start_dark)),
                 #[cfg(target_os = "macos")]
                 apple_events.connect(&cc.egui_ctx),
                 #[cfg(target_os = "macos")]

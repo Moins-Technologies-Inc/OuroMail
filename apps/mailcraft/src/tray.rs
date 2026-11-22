@@ -35,11 +35,11 @@ fn has_unread(session: &mut mailcraft_engine::Session) -> bool {
     })
 }
 
-/// Both backends use the same artwork, OuroMail's tray icon (its bolder drawing for small sizes).
-/// Generate the badge once, never on each frame, and composite it into the icon so desktops
-/// cannot place it in a different corner.
-fn icons() -> Option<[egui::IconData; 2]> {
-    let plain = crate::tray_icon()?;
+/// Both backends use the same artwork for each theme polarity (dark artwork on light mode, light
+/// artwork on dark mode). Generate the badge once, never on each frame, and composite it into the
+/// icon so desktops cannot place it in a different corner.
+fn icons_for(dark: bool) -> Option<[egui::IconData; 2]> {
+    let plain = crate::tray_icon_for(dark)?;
     let mut badged = plain.clone();
     let side = badged.width.min(badged.height) as f32;
     let center = side * 0.20;
@@ -63,6 +63,12 @@ fn icons() -> Option<[egui::IconData; 2]> {
         pixel[3] = (alpha * 255.0).round() as u8;
     }
     Some([plain, badged])
+}
+
+/// All tray icon variants generated once at startup: index 0 = light mode (dark icon),
+/// index 1 = dark mode (light icon); each holds `[plain, badged]`.
+fn all_icons() -> Option<[[egui::IconData; 2]; 2]> {
+    Some([icons_for(false)?, icons_for(true)?])
 }
 
 /// Whether the window is to be an X11 client: only for Close to system tray, and only when X11
@@ -188,8 +194,9 @@ impl Tray {
     pub fn pump(&mut self, ctx: &Context, app: &mut MailApp) {
         self.configure(app.ui.close_to_tray, backend::Backend::start);
         let unread = self.backend.is_some() && has_unread(&mut app.session);
+        let dark = ctx.global_style().visuals.dark_mode;
         if let Some(backend) = &mut self.backend {
-            backend.poll(unread);
+            backend.poll(unread, dark);
         }
         let pending = self.signals.pending.swap(0, Ordering::Relaxed);
         let sync = ctx.data_mut(|d| d.remove_temp::<bool>(egui::Id::unique("mailcraft.tray.sync"))).unwrap_or(false);
@@ -289,7 +296,7 @@ mod backend {
         pub fn start(_: std::sync::Arc<super::Signals>) -> Self {
             Self
         }
-        pub fn poll(&mut self, _: bool) {}
+        pub fn poll(&mut self, _: bool, _: bool) {}
         pub fn ready(&self) -> bool {
             false
         }

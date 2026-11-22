@@ -552,13 +552,36 @@ fn sizes_are_said_in_megabytes() {
     assert_eq!(megabytes(0, 0), "0.0");
 }
 
+fn mean_opaque_luminance(png: &[u8]) -> f64 {
+    let rgba = image::load_from_memory_with_format(png, image::ImageFormat::Png).unwrap().into_rgba8();
+    let (sum, count) = rgba.pixels().fold((0.0f64, 0u64), |(sum, count), p| {
+        if p[3] >= 128 {
+            let lum = 0.2126 * f64::from(p[0]) + 0.7152 * f64::from(p[1]) + 0.0722 * f64::from(p[2]);
+            (sum + lum, count + 1)
+        } else {
+            (sum, count)
+        }
+    });
+    assert!(count > 0, "logo must have opaque pixels");
+    sum / count as f64
+}
+
 #[test]
 fn the_logo_is_the_app_icon_and_is_made_once() {
     let ctx = egui::Context::default();
-    let first = logo(&ctx).expect("the icon is built in");
-    assert_eq!(first.size(), [256, 256]);
-    let second = logo(&ctx).unwrap();
-    assert_eq!(first.id(), second.id());
+    let light_mode = logo(&ctx, false).expect("light-mode icon is built in");
+    let dark_mode = logo(&ctx, true).expect("dark-mode icon is built in");
+    assert_eq!(light_mode.size(), [256, 256]);
+    assert_eq!(dark_mode.size(), [256, 256]);
+    assert_ne!(light_mode.id(), dark_mode.id(), "dark and light modes must cache distinct logos");
+    assert_eq!(logo(&ctx, false).unwrap().id(), light_mode.id());
+    assert_eq!(logo(&ctx, true).unwrap().id(), dark_mode.id());
+    let lum_dark_mode = mean_opaque_luminance(logo_png(true));
+    let lum_light_mode = mean_opaque_luminance(logo_png(false));
+    assert!(
+        lum_dark_mode > lum_light_mode,
+        "dark mode must use the lighter opening logo (dark_mode={lum_dark_mode:.2} vs light_mode={lum_light_mode:.2})"
+    );
 }
 
 #[test]
