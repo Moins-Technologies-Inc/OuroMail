@@ -32,21 +32,22 @@ impl Backend {
         let sync = MenuItem::with_id("mailcraft.tray.sync", sync, true, None);
         let quit = MenuItem::with_id("mailcraft.tray.quit", quit, true, None);
         let build = || -> Result<_, Box<dyn std::error::Error>> {
-            let [[light_plain, light_badged], [dark_plain, dark_badged]] = super::all_icons().ok_or("MailCraft icon couldn't be read")?;
+            let [[light_mode_plain, light_mode_badged], [dark_mode_plain, dark_mode_badged]] =
+                super::all_icons().ok_or("MailCraft icon couldn't be read")?;
             let to_icon = |d: egui::IconData| tray_icon::Icon::from_rgba(d.rgba, d.width, d.height);
-            let light_plain = to_icon(light_plain)?;
-            let light_badged = to_icon(light_badged)?;
-            let dark_plain = to_icon(dark_plain)?;
-            let dark_badged = to_icon(dark_badged)?;
+            let light_mode_plain = to_icon(light_mode_plain)?;
+            let light_mode_badged = to_icon(light_mode_badged)?;
+            let dark_mode_plain = to_icon(dark_mode_plain)?;
+            let dark_mode_badged = to_icon(dark_mode_badged)?;
             let menu = Menu::new();
             menu.append_items(&[&show, &sync, &PredefinedMenuItem::separator(), &quit])?;
             let icon = TrayIconBuilder::new()
-                .with_icon(light_plain.clone())
+                .with_icon(light_mode_plain.clone())
                 .with_tooltip("OuroMail")
                 .with_menu(Box::new(menu))
                 .with_menu_on_left_click(cfg!(target_os = "macos"))
                 .build()?;
-            Ok((icon, [[light_plain, light_badged], [dark_plain, dark_badged]]))
+            Ok((icon, [[light_mode_plain, light_mode_badged], [dark_mode_plain, dark_mode_badged]]))
         };
         let (icon, icons) = match build() {
             Ok((icon, icons)) => (Some(icon), Some(icons)),

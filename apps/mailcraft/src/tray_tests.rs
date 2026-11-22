@@ -405,3 +405,27 @@ fn appkit_hide_tracks_only_tray_closes_and_dock_unhide_ends_them() {
     tray.after_frame_with_visibility(&ctx, Some(false));
     assert!(!tray.hidden, "the Dock's unhide ends the tray hide");
 }
+
+#[test]
+fn window_icon_sync_asks_for_a_repaint_when_the_icon_changes() {
+    // Windows already open take the new icon from `window_identity` on the frame after the
+    // change: that frame must come without waiting for input.
+    let ctx = Context::default();
+    let mut app = MailApp::new(mailcraft_engine::Session::empty(), mailcraft_ui_egui::Services::default());
+    let mut icon = crate::WindowIcon::new(Some(false));
+    ctx.set_visuals(egui::Visuals::light());
+    // The first passes of a new context are repaints of their own.
+    for _ in 0..3 {
+        let _ = ctx.run_logic(&egui::RawInput::default(), |ctx| icon.sync(ctx, &mut app));
+    }
+    assert!(!ctx.has_requested_repaint(), "a steady light frame asks for no repaint");
+
+    ctx.set_visuals(egui::Visuals::dark());
+    let _ = ctx.run_logic(&egui::RawInput::default(), |ctx| icon.sync(ctx, &mut app));
+    assert!(ctx.has_requested_repaint(), "switching to dark must ask for the next frame");
+
+    for _ in 0..3 {
+        let _ = ctx.run_logic(&egui::RawInput::default(), |ctx| icon.sync(ctx, &mut app));
+    }
+    assert!(!ctx.has_requested_repaint(), "a steady dark frame asks for no repaint");
+}

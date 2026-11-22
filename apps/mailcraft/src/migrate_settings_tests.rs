@@ -299,3 +299,91 @@ fn non_blue_accent_and_nested_or_malformed_ui_json_are_left_verbatim() {
     migrate(&src2, &dst2).unwrap();
     assert_eq!(fs::read(dst2.join("ui.json")).unwrap(), bad);
 }
+
+/// The names in `dir` itself, sorted.
+fn names_in(dir: &Path) -> Vec<String> {
+    let mut names: Vec<String> = fs::read_dir(dir).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+    names.sort();
+    names
+}
+
+#[test]
+fn a_ui_json_tmp_already_in_the_source_does_not_stop_the_accent_rewrite() {
+    let (root, src, dst) = scratch();
+    put(&src.join("ui.json"), br#"{"accent": "blue"}"#);
+    put(&src.join(".ui.json.tmp"), b"left there by somebody");
+    let before = snapshot(&src);
+    assert_eq!(migrate(&src, &dst).unwrap(), Outcome::Copied { files: 2, folders: 0, skipped: 0 });
+    let got: serde_json::Value = serde_json::from_slice(&fs::read(dst.join("ui.json")).unwrap()).unwrap();
+    assert_eq!(got["accent"], "ouro", "the rewrite must not depend on a fixed temporary name");
+    assert_eq!(fs::read(dst.join(".ui.json.tmp")).unwrap(), b"left there by somebody", "the other file is copied as it was");
+    assert_eq!(names_in(&dst), [".ui.json.tmp", "ui.json"], "no temporary file is left behind");
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt as _;
+        assert_eq!(fs::metadata(dst.join("ui.json")).unwrap().permissions().mode() & 0o777, 0o600, "the rewritten file is the owner's alone");
+    }
+    assert_eq!(snapshot(&src), before, "MailCraft's folder must stay byte-for-byte untouched");
+    assert!(staging_left(root.path()).is_empty());
+}
+
+#[test]
+fn a_ui_json_that_is_not_an_object_or_whose_accent_is_not_a_string_is_left_verbatim() {
+    let shapes: [&[u8]; 9] = [
+        b"[1, 2, 3]",
+        b"\"blue\"",
+        b"null",
+        b"42",
+        br#"{"accent": 123}"#,
+        br#"{"accent": null}"#,
+        br#"{"accent": true}"#,
+        br#"{"accent": ["blue"]}"#,
+        br#"{"accent": {"name": "blue"}}"#,
+    ];
+    for bytes in shapes {
+        let shown = String::from_utf8_lossy(bytes);
+        let (root, src, dst) = scratch();
+        put(&src.join("ui.json"), bytes);
+        let before = snapshot(&src);
+        assert_eq!(migrate(&src, &dst).unwrap(), Outcome::Copied { files: 1, folders: 0, skipped: 0 }, "{shown}");
+        assert_eq!(fs::read(dst.join("ui.json")).unwrap(), bytes, "{shown} stays as it was copied");
+        assert_eq!(names_in(&dst), ["ui.json"], "{shown}: nothing else is left in the copy");
+        assert_eq!(snapshot(&src), before, "{shown}: MailCraft's folder is untouched");
+        assert!(staging_left(root.path()).is_empty(), "{shown}");
+    }
+}
+
+#[test]
+fn a_ui_json_over_the_size_cap_is_copied_verbatim_with_its_blue_accent() {
+    let (root, src, dst) = scratch();
+    let mut bytes = br#"{"accent": "blue", "pad": ""#.to_vec();
+    bytes.resize(usize::try_from(super::MAX_UI_JSON_BYTES).unwrap() + 64, b'x');
+    bytes.extend_from_slice(b"\"}");
+    // Within the cap this would have been rewritten: it is JSON with the default accent.
+    let parsed: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(parsed["accent"], "blue");
+    put(&src.join("ui.json"), &bytes);
+    let before = snapshot(&src);
+    assert_eq!(migrate(&src, &dst).unwrap(), Outcome::Copied { files: 1, folders: 0, skipped: 0 });
+    assert!(fs::read(dst.join("ui.json")).unwrap() == bytes, "an oversized ui.json is copied as it is");
+    assert_eq!(names_in(&dst), ["ui.json"]);
+    assert!(snapshot(&src) == before, "MailCraft's folder is untouched");
+    assert!(staging_left(root.path()).is_empty());
+}
+
+#[cfg(unix)]
+#[test]
+fn a_symlinked_ui_json_is_not_followed_and_its_target_is_left_alone() {
+    let (root, src, dst) = scratch();
+    let elsewhere = root.path().join("elsewhere.json");
+    put(&elsewhere, br#"{"accent": "blue"}"#);
+    std::os::unix::fs::symlink(&elsewhere, src.join("ui.json")).unwrap();
+    let before = snapshot(&src);
+    let target_before = snapshot(root.path()).get(Path::new("elsewhere.json")).cloned();
+    assert_eq!(migrate(&src, &dst).unwrap(), Outcome::Copied { files: 0, folders: 0, skipped: 1 });
+    assert!(fs::symlink_metadata(dst.join("ui.json")).is_err(), "a link is never copied, nor what it points at");
+    assert_eq!(names_in(&dst), Vec::<String>::new());
+    assert_eq!(snapshot(root.path()).get(Path::new("elsewhere.json")).cloned(), target_before, "the link's target is untouched");
+    assert_eq!(snapshot(&src), before, "MailCraft's folder is untouched");
+    assert!(staging_left(root.path()).is_empty());
+}

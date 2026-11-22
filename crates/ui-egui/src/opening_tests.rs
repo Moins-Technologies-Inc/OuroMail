@@ -820,3 +820,39 @@ fn a_mailbox_whose_lock_is_given_opens_as_before() {
     assert_eq!(app.session.mailbox.messages.len(), 5);
     assert_eq!(*asked.lock().unwrap(), vec![file]);
 }
+
+/// The textures the window painted in its last frame.
+fn painted_textures(h: &egui_kittest::Harness<'static, MailApp>) -> std::collections::HashSet<egui::TextureId> {
+    let out = h.output();
+    h.ctx
+        .tessellate(out.shapes.clone(), out.pixels_per_point)
+        .into_iter()
+        .filter_map(|p| match p.primitive {
+            egui::epaint::Primitive::Mesh(mesh) => Some(mesh.texture_id),
+            egui::epaint::Primitive::Callback(_) => None,
+        })
+        .collect()
+}
+
+#[test]
+fn the_opening_screen_paints_the_light_logo_in_dark_mode_and_the_dark_logo_in_light_mode() {
+    for (theme, dark) in [(crate::theme::Appearance::Light, false), (crate::theme::Appearance::Dark, true)] {
+        let (_tx, rx) = channel();
+        let prefs = crate::UiState { theme, ..Default::default() };
+        let app = MailApp::opening(Opening::new(rx, Default::default(), Box::new(|_| sample_app(Services::default()))), Some(prefs), None);
+        let mut h = harness(app);
+        waited_a_while(h.state_mut());
+        h.run_steps(2);
+        assert!(h.query_by_label("Opening…").is_some(), "dark={dark}: the opening screen is shown");
+        assert_eq!(Tokens::get(&h.ctx).dark, dark);
+        let cached = |key: &str| h.ctx.data(|d| d.get_temp::<egui::TextureHandle>(egui::Id::unique(key))).map(|t| t.id());
+        let (wanted, other) = if dark {
+            ("mailcraft-opening-logo-light", "mailcraft-opening-logo-dark")
+        } else {
+            ("mailcraft-opening-logo-dark", "mailcraft-opening-logo-light")
+        };
+        let painted = painted_textures(&h);
+        assert!(cached(wanted).is_some_and(|id| painted.contains(&id)), "dark={dark}: the opening screen paints {wanted}");
+        assert!(!cached(other).is_some_and(|id| painted.contains(&id)), "dark={dark}: the opening screen doesn't paint {other}");
+    }
+}

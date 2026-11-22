@@ -28,7 +28,7 @@
 
 use std::ffi::OsStr;
 use std::fs;
-use std::io::{self, Read as _, Write as _};
+use std::io::{self, Read as _};
 use std::path::{Path, PathBuf};
 
 /// Folders deeper than this under MailCraft's are not copied: the copy is abandoned instead (a
@@ -268,24 +268,9 @@ fn rewrite_default_accent(staging: &Path) {
     if u64::try_from(updated.len()).unwrap_or(u64::MAX) > MAX_UI_JSON_BYTES {
         return;
     }
-    let tmp = staging.join(".ui.json.tmp");
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt as _;
-        options.mode(0o600);
-    }
-    let Ok(mut target) = options.open(&tmp) else { return };
-    let written = (|| -> io::Result<()> {
-        target.write_all(&updated)?;
-        target.sync_all()?;
-        drop(target);
-        fs::rename(&tmp, &path)
-    })();
-    if written.is_err() {
-        let _ = fs::remove_file(&tmp);
-    }
+    // A temporary file of a fresh name beside it (0600 on Unix), flushed, then renamed over, and
+    // removed when anything fails: no file the source folder happens to hold is in the way.
+    let _ = mailcraft_engine::store::write_atomic(&path, &updated);
 }
 
 /// Flush the folder `dir`, so that the rename in it reaches the disk (where folders can be

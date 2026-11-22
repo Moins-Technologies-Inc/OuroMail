@@ -135,7 +135,9 @@ use mailcraft_ui_egui::{
 };
 
 /// Keeps the main window's icon (and secondary windows' identity) in step with the active theme,
-/// sending `ViewportCommand::Icon` once per change and never on every frame.
+/// sending `ViewportCommand::Icon` once per change and never on every frame. On macOS that
+/// command doesn't reach the Dock: its icon is the one set once at start ([`app_icon`]) and
+/// doesn't follow a later change of theme.
 struct WindowIcon {
     last_dark: Option<bool>,
 }
@@ -155,6 +157,8 @@ impl WindowIcon {
         if let Some(identity) = &mut app.services.window_identity {
             identity.icon = icon.clone();
         }
+        // That also asks for the next frame, in which windows already open take the new icon
+        // (`window_identity`) without waiting for input.
         ctx.send_viewport_cmd(egui::ViewportCommand::Icon(icon));
     }
 }
@@ -1459,18 +1463,16 @@ fn update_download(
 /// (`packaging/linux/tech.moins.ouromail.desktop`).
 const APP_ID: &str = "tech.moins.ouromail";
 
-/// Whether the window starts in dark mode, from saved preferences and the desktop theme when
-/// already known (`desktop_theme`), else light.
+/// Whether the window starts in dark mode: the saved Light or Dark choice decides. The desktop's
+/// theme isn't known before the window exists, so with "Use system setting" the window starts
+/// with the light-mode icon, and [`WindowIcon::sync`] puts the right one on the first frame.
 fn initial_dark(prefs: Option<&UiState>) -> bool {
-    #[cfg(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly"))]
-    let system = DESKTOP_THEME.get().and_then(desktop_theme::DesktopTheme::get);
-    #[cfg(not(any(target_os = "linux", target_os = "freebsd", target_os = "openbsd", target_os = "netbsd", target_os = "dragonfly")))]
-    let system = None;
-    prefs.map_or_else(Default::default, |ui| ui.theme).preference(system) == egui::ThemePreference::Dark
+    prefs.map_or_else(Default::default, |ui| ui.theme).preference(None) == egui::ThemePreference::Dark
 }
 
 /// Window, Dock and taskbar icon for the active theme: light artwork on dark mode, dark artwork
-/// on light mode (`assets/app-icon`, attributed in `ATTRIBUTION.md`).
+/// on light mode (`assets/app-icon`, attributed in `ATTRIBUTION.md`). On macOS the Dock icon is
+/// set once, at start, and doesn't follow a later change of theme (see [`WindowIcon`]).
 pub(crate) fn app_icon_for(dark: bool) -> Option<egui::IconData> {
     #[cfg(target_os = "macos")]
     let png: &[u8] = if dark {
@@ -1487,8 +1489,7 @@ pub(crate) fn app_icon_for(dark: bool) -> Option<egui::IconData> {
     eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("app icon: {e}")).ok()
 }
 
-/// Window, Dock and taskbar icon at startup, from the saved theme preference (and desktop theme
-/// when available).
+/// Window, Dock and taskbar icon at startup, from the saved theme preference ([`initial_dark`]).
 fn app_icon(prefs: Option<&UiState>) -> Option<egui::IconData> {
     app_icon_for(initial_dark(prefs))
 }
@@ -1500,7 +1501,7 @@ pub(crate) fn tray_icon_for(dark: bool) -> Option<egui::IconData> {
     let png: &[u8] = if dark {
         include_bytes!("../../../assets/app-icon/ouromail-tray-64.png")
     } else {
-        include_bytes!("../../../assets/app-icon/ouromail-tray-dark-64.png")
+        include_bytes!("../../../assets/app-icon/hicolor/64x64/apps/tech.moins.ouromail.png")
     };
     eframe::icon_data::from_png_bytes(png).map_err(|e| log::warn!("tray icon: {e}")).ok()
 }
