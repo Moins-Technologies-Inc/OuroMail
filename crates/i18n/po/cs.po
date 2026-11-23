@@ -1062,6 +1062,12 @@ msgid "Add address"
 msgstr "Přidat adresu"
 
 #. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Add again"
+msgstr "Znovu přidat"
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Add an account"
@@ -4893,6 +4899,12 @@ msgstr "Hledání v adresáři: vyžaduje schválení správcem"
 #. interface
 #: crates/ui-egui/src/directory_search.rs
 #, fuzzy
+msgid "Directory search: not answered in this session"
+msgstr "Hledání v adresáři: v této relaci bez odpovědi"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
 msgid "Directory search: not asked in this session"
 msgstr "Hledání v adresáři: v této relaci nedotázáno"
 
@@ -6409,7 +6421,7 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr "Zatím se vaše automatické odpovědi nemění: {error}"
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/ews_setup.rs crates/ui-egui/src/shared_before.rs
 #, fuzzy
 msgid "Forget"
 msgstr "Zapomenout"
@@ -6421,10 +6433,22 @@ msgid "Forget Downloaded Calendar and Contacts"
 msgstr "Zapomenout stažený kalendář a kontakty"
 
 #. command label
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "Forget Shared Mailbox Opened Before"
+msgstr "Zapomenout dříve otevřenou sdílenou poštovní schránku"
+
+#. command label
 #: crates/engine/src/cmd/account.rs
 #, fuzzy
 msgid "Forget Trusted Certificate"
 msgstr "Zapomenout důvěryhodný certifikát"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Forget all"
+msgstr "Zapomenout vše"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
@@ -12089,6 +12113,12 @@ msgstr "Otevřít tento kalendář"
 #, fuzzy
 msgid "Open {name}? {why}"
 msgstr "Otevřít {name}? {why}"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Opened before"
+msgstr "Dříve otevřené"
 
 #. interface
 #: crates/ui-egui/src/open_shared.rs
@@ -25227,6 +25257,12 @@ msgstr "{address} je nastaven"
 #, fuzzy
 msgid "{address} isn't a shared mailbox open here."
 msgstr "{address} není sdílená poštovní schránka otevřená zde."
+
+#. what a command says
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "{address} isn't among the shared mailboxes opened before"
+msgstr "{address} není mezi dříve otevřenými sdílenými poštovními schránkami"
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs

@@ -2256,6 +2256,21 @@ pub(crate) fn scrim_layer() -> egui::LayerId {
 /// The frame shared by the dialogs: a centred window with a title. Returns `false` when it was
 /// closed with its close button.
 pub(crate) fn window(ctx: &egui::Context, title: &str, width: f32, add: impl FnOnce(&mut Ui)) -> bool {
+    window_lifted(ctx, title, width, DIALOG_LIFT, add)
+}
+
+/// How far a dialog sits above the middle of the window.
+pub(crate) const DIALOG_LIFT: f32 = 40.0;
+/// A window shorter than this has its tall dialogs in the middle, not lifted: they need the room.
+const SHORT_WINDOW: f32 = 640.0;
+
+/// The lift of a tall dialog in a window `height` high.
+pub(crate) fn lift_for(height: f32) -> f32 {
+    if height < SHORT_WINDOW { 0.0 } else { DIALOG_LIFT }
+}
+
+/// [`window`], `lift` above the middle.
+pub(crate) fn window_lifted(ctx: &egui::Context, title: &str, width: f32, lift: f32, add: impl FnOnce(&mut Ui)) -> bool {
     let mut open = true;
     let id = egui::Id::unique("dialog");
     // A click on the scrim lifts it to the top of its order, over the dialog, where it would take
@@ -2266,7 +2281,7 @@ pub(crate) fn window(ctx: &egui::Context, title: &str, width: f32, add: impl FnO
         .open(&mut open)
         .collapsible(false)
         .resizable(false)
-        .anchor(Align2::CENTER_CENTER, vec2(0.0, -40.0))
+        .anchor(Align2::CENTER_CENTER, vec2(0.0, -lift))
         .default_width(width)
         .min_width(width)
         .max_width(width)
@@ -2513,6 +2528,8 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
             let mut submit = false;
             // An entry of the directory's search, picked: added as a typed address is.
             let mut pick: Option<crate::directory_search::Pick> = None;
+            // One opened before, to be added again (Q4): added as a typed address is, too.
+            let mut again: Option<String> = None;
             let searching = app.directory_offered(search);
             let owner = app.session.mailbox.account(*account).map(|a| a.email.clone()).unwrap_or_default();
             // (One that is being checked and is gone was answered: [`MailApp::finish_shared_check`].)
@@ -2521,17 +2538,23 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
             }
             // The list of what the directory found takes only the room the window leaves, so that
             // the title, the fields and the buttons stay on screen at every window size.
+            let lift = lift_for(ctx.content_rect().height());
             if searching {
                 let drawn = ctx.memory(|m| m.area_rect(egui::Id::unique("dialog"))).map(|r| r.height());
-                search.room = Some(crate::directory_search::list_room(ctx.content_rect().height(), drawn, search.list_drawn));
+                search.room = Some(crate::directory_search::list_room(ctx.content_rect().height(), drawn, search.list_drawn, lift));
             }
             let question = searching && search.area == crate::directory_search::Area::Offer;
-            let open = window(ctx, tl!("Add Shared Mailbox"), if searching { 460.0 } else { 420.0 }, |ui| {
+            let open = window_lifted(ctx, tl!("Add Shared Mailbox"), if searching { 460.0 } else { 420.0 }, lift, |ui| {
                 if searching {
                     pick = crate::directory_search::search_ui(app, ui, &t, *account, search, checking.is_none());
+                    // (Opened before, while nothing is searched.)
+                    if search.text.trim().is_empty() {
+                        again = crate::shared_before::section(app, ui, &t, *account, checking.is_none());
+                    }
                     ui.add_space(6.0);
                     ui.label(tl!("Or type its address"));
                 } else {
+                    again = crate::shared_before::section(app, ui, &t, *account, checking.is_none());
                     ui.label(tl!("The shared mailbox's e-mail address"));
                 }
                 let field = egui::TextEdit::singleline(address).hint_text("support@example.org").desired_width(f32::INFINITY);
@@ -2575,6 +2598,11 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
                 close |= cancel;
             });
             close |= !open;
+            // The owner's own Escape or close while the directory's question is up is his no; an
+            // agent's or a script's (a key or a click it put in) is nobody's.
+            if close && question && !app.driven {
+                app.directory_search.declined_by_owner = Some(*account);
+            }
             // Called off while it was being checked: it isn't kept.
             if close && let Some(id) = checking.take() {
                 app.drop_shared_check(id);
@@ -2587,14 +2615,20 @@ pub fn show(app: &mut MailApp, ctx: &egui::Context) {
             if let Some(entry) = &picked {
                 *address = entry.address.clone();
             }
-            if (submit || picked.is_some()) && !close {
+            let again = again.filter(|_| !close && checking.is_none() && picked.is_none());
+            let from_before = again.is_some();
+            if let Some(remembered) = again {
+                *address = remembered;
+            }
+            if (submit || picked.is_some() || from_before) && !close {
                 error.clear();
                 let params = json!({"account": *account, "address": address.trim()});
                 match app.execute("account.addSharedMailbox", params) {
                     // Kept only once its Inbox has been read: that is also when the owner is asked
                     // for the permission (S1).
                     Ok(added) => match added.get("id").and_then(Value::as_u64) {
-                        Some(id) => match app.begin_shared_check(id) {
+                        // (One added again that isn't kept is remembered again.)
+                        Some(id) => match app.note_from_before(id, from_before).begin_shared_check(id) {
                             Ok(()) => *checking = Some(id),
                             Err(e) => *error = e,
                         },

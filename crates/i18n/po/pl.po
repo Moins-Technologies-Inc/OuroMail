@@ -1063,6 +1063,12 @@ msgid "Add address"
 msgstr "Dodaj adres"
 
 #. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Add again"
+msgstr "Dodaj ponownie"
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Add an account"
@@ -4903,6 +4909,12 @@ msgstr "Wyszukiwanie w katalogu: wymaga zgody administratora"
 #. interface
 #: crates/ui-egui/src/directory_search.rs
 #, fuzzy
+msgid "Directory search: not answered in this session"
+msgstr "Wyszukiwanie w katalogu: w tej sesji bez odpowiedzi"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
 msgid "Directory search: not asked in this session"
 msgstr "Wyszukiwanie w katalogu: w tej sesji jeszcze nie pytano"
 
@@ -6420,7 +6432,7 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr "Na razie odpowiedzi automatyczne nie są zmieniane: {error}"
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/ews_setup.rs crates/ui-egui/src/shared_before.rs
 #, fuzzy
 msgid "Forget"
 msgstr "Zapomnij"
@@ -6432,10 +6444,22 @@ msgid "Forget Downloaded Calendar and Contacts"
 msgstr "Zapomnij pobrany kalendarz i kontakty"
 
 #. command label
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "Forget Shared Mailbox Opened Before"
+msgstr "Zapomnij wcześniej otwieraną udostępnioną skrzynkę pocztową"
+
+#. command label
 #: crates/engine/src/cmd/account.rs
 #, fuzzy
 msgid "Forget Trusted Certificate"
 msgstr "Zapomnij zaufany certyfikat"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Forget all"
+msgstr "Zapomnij wszystkie"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
@@ -12109,6 +12133,12 @@ msgstr "Otwórz ten kalendarz"
 #, fuzzy
 msgid "Open {name}? {why}"
 msgstr "Otworzyć {name}? {why}"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Opened before"
+msgstr "Otwierane wcześniej"
 
 #. interface
 #: crates/ui-egui/src/open_shared.rs
@@ -25259,6 +25289,12 @@ msgstr "{address} jest skonfigurowany"
 #, fuzzy
 msgid "{address} isn't a shared mailbox open here."
 msgstr "{address} nie jest udostępnioną skrzynką pocztową otwartą tutaj."
+
+#. what a command says
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "{address} isn't among the shared mailboxes opened before"
+msgstr "{address} nie ma wśród wcześniej otwieranych udostępnionych skrzynek pocztowych"
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs

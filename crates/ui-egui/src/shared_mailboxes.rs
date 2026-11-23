@@ -417,9 +417,21 @@ impl MailApp {
         }
         self.shared_refused.remove(&shared);
         self.graph_tokens.remove(&shared);
+        // Remembered among those opened before only when it was added again from that list: a
+        // typed address that wasn't kept was never there for the owner (Q4).
+        let remember = self.shared_from_before.remove(&shared);
         if self.session.mailbox.account(shared).is_some_and(Account::is_shared) {
-            let _ = self.execute("account.removeSharedMailbox", json!({"id": shared}));
+            let _ = self.execute("account.removeSharedMailbox", json!({"id": shared, "remember": remember}));
         }
+    }
+
+    /// Note that the shared mailbox `shared` was just added again from Opened before (when
+    /// `from_before`), so that one that isn't kept is remembered again.
+    pub(crate) fn note_from_before(&mut self, shared: Id, from_before: bool) -> &mut Self {
+        if from_before {
+            self.shared_from_before.insert(shared);
+        }
+        self
     }
 
     /// What reading a shared mailbox being added came to: kept and the dialog closed, or removed
@@ -432,6 +444,7 @@ impl MailApp {
         match outcome {
             Ok(()) => {
                 self.shared_checking.remove(&shared);
+                self.shared_from_before.remove(&shared);
                 if ours {
                     self.set_dialog(None);
                 }

@@ -535,6 +535,12 @@ pub struct Account {
     /// Empty for every other account, and in a file from before there were any.
     #[serde(skip_serializing_if = "Vec::is_empty", deserialize_with = "crate::sync::lenient_list")]
     pub listed_twice: Vec<crate::ListedTwice>,
+    /// For a Microsoft account at work or school: the shared mailboxes opened under it and
+    /// removed since ([`SharedBefore`], Q4), newest first, at most [`MAX_SHARED`], offered again
+    /// in Add Shared Mailbox. Kept here only: never sent anywhere. Empty for every other account,
+    /// and in a file from before there were any.
+    #[serde(skip_serializing_if = "Vec::is_empty", deserialize_with = "crate::sync::lenient_list")]
+    pub shared_before: Vec<SharedBefore>,
     /// Its other sender addresses (#797; [`crate::senders`]): used only by an account that takes
     /// them ([`Account::takes_sender_addresses`]). Empty in a file from before there were any.
     #[serde(skip_serializing_if = "Vec::is_empty", deserialize_with = "crate::sync::lenient_list")]
@@ -641,6 +647,85 @@ impl Account {
     /// of a shared mailbox's calendar (#70): it isn't read from the server, nor shown.
     pub fn hides_listed(&self, owner: Option<&crate::CalendarOwner>) -> bool {
         owner.is_some_and(|owner| !owner.address.trim().is_empty() && self.listed_twice_answer(&owner.address) == Some(true))
+    }
+}
+
+/// A shared mailbox an account opened before and removed since (Q4): its address, and the name
+/// its mail was from, cleaned as a name coming in is. Kept in the mailbox file only.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct SharedBefore {
+    pub address: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub name: String,
+}
+
+impl SharedBefore {
+    /// `address` as an address is read and `name` as a name coming in is cleaned; `None` for one
+    /// that isn't an address.
+    fn cleaned(address: &str, name: &str) -> Option<Self> {
+        let address = crate::mailbox_address(address)?;
+        let name = mailcraft_names::incoming(name, crate::MAX_NAME).unwrap_or_default();
+        Some(Self { address, name })
+    }
+}
+
+impl Account {
+    /// Remember the shared mailbox at `address`, named `name`, as opened before: first, once
+    /// (whatever the case of its address), at most [`MAX_SHARED`], never the account's own address
+    /// nor one that isn't an address.
+    pub fn remember_shared(&mut self, address: &str, name: &str) {
+        let Some(entry) = SharedBefore::cleaned(address, name) else { return };
+        if entry.address.eq_ignore_ascii_case(self.email.trim()) {
+            return;
+        }
+        self.shared_before.retain(|e| !e.address.eq_ignore_ascii_case(&entry.address));
+        self.shared_before.insert(0, entry);
+        self.shared_before.truncate(MAX_SHARED);
+    }
+
+    /// Forget the shared mailbox at `address` opened before, or every one with none: how many
+    /// went. Addresses compare without regard to ASCII case.
+    pub fn forget_shared(&mut self, address: Option<&str>) -> usize {
+        let before = self.shared_before.len();
+        match address {
+            Some(address) => {
+                let address = address.trim();
+                self.shared_before.retain(|e| !e.address.eq_ignore_ascii_case(address));
+            }
+            None => self.shared_before.clear(),
+        }
+        before.saturating_sub(self.shared_before.len())
+    }
+
+    /// The name the shared mailbox at `address` had when it was opened before, if it was.
+    pub fn shared_before_name(&self, address: &str) -> Option<&str> {
+        let address = address.trim();
+        self.shared_before.iter().find(|e| e.address.eq_ignore_ascii_case(address)).map(|e| e.name.as_str())
+    }
+
+    /// Keep what a mailbox file says was opened before to what can be kept (a file can be written
+    /// by anybody): only for an account that can open shared mailboxes, each an address as one is
+    /// read and its name cleaned as a name coming in is, once, never the account's own, at most
+    /// [`MAX_SHARED`].
+    pub fn clamp_shared_before(&mut self) {
+        if !self.can_open_shared() {
+            self.shared_before.clear();
+            return;
+        }
+        let own = self.email.trim().to_string();
+        let mut kept: Vec<SharedBefore> = Vec::new();
+        for entry in std::mem::take(&mut self.shared_before) {
+            if kept.len() >= MAX_SHARED {
+                break;
+            }
+            let Some(entry) = SharedBefore::cleaned(&entry.address, &entry.name) else { continue };
+            if entry.address.eq_ignore_ascii_case(&own) || kept.iter().any(|have| have.address.eq_ignore_ascii_case(&entry.address)) {
+                continue;
+            }
+            kept.push(entry);
+        }
+        self.shared_before = kept;
     }
 }
 
@@ -1697,6 +1782,17 @@ impl Mailbox {
         for account in &mut self.accounts {
             let id = account.id;
             account.listed_twice.retain(|entry| open.iter().any(|(owner, address)| *owner == id && address.eq_ignore_ascii_case(&entry.address)));
+        }
+    }
+
+    /// Keep each account's [`Account::shared_before`] to the shared mailboxes not open under it now:
+    /// one that is open again isn't offered again.
+    pub fn tidy_shared_before(&mut self) {
+        let open: Vec<(Id, String)> =
+            self.accounts.iter().filter(|a| a.is_shared()).filter_map(|a| a.shared_of.map(|owner| (owner, a.email.trim().to_string()))).collect();
+        for account in &mut self.accounts {
+            let id = account.id;
+            account.shared_before.retain(|entry| !open.iter().any(|(owner, address)| *owner == id && address.eq_ignore_ascii_case(&entry.address)));
         }
     }
 
@@ -4575,6 +4671,7 @@ impl Mailbox {
         }
         for a in &mut self.accounts {
             a.clamp_opened_calendars();
+            a.clamp_shared_before();
             a.clamp_sender_addresses();
             if a.id == 0 || !sane(&a.id) || !seen.insert(a.id) {
                 let old = a.id;
@@ -4630,6 +4727,7 @@ impl Mailbox {
         }
         self.settle_synced_categories(&own);
         self.tidy_listed_twice();
+        self.tidy_shared_before();
         // The owner's order names their own accounts (`own`, above), each once (#702): whatever
         // else a file says there is dropped.
         let mut named = HashSet::new();

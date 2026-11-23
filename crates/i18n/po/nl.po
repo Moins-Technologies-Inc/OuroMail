@@ -1040,6 +1040,12 @@ msgid "Add address"
 msgstr "Adres toevoegen"
 
 #. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Add again"
+msgstr "Opnieuw toevoegen"
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Add an account"
@@ -4729,6 +4735,12 @@ msgstr "Zoeken in adreslijst: goedkeuring van uw beheerder nodig"
 #. interface
 #: crates/ui-egui/src/directory_search.rs
 #, fuzzy
+msgid "Directory search: not answered in this session"
+msgstr "Zoeken in adreslijst: in deze sessie niet beantwoord"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
 msgid "Directory search: not asked in this session"
 msgstr "Zoeken in adreslijst: in deze sessie nog niet gevraagd"
 
@@ -6163,7 +6175,7 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr "Voorlopig worden uw automatische antwoorden niet gewijzigd: {error}"
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/ews_setup.rs crates/ui-egui/src/shared_before.rs
 #, fuzzy
 msgid "Forget"
 msgstr "Vergeten"
@@ -6174,9 +6186,21 @@ msgid "Forget Downloaded Calendar and Contacts"
 msgstr "Gedownloade agenda en contactpersonen vergeten"
 
 #. command label
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "Forget Shared Mailbox Opened Before"
+msgstr "Eerder geopend gedeeld postvak vergeten"
+
+#. command label
 #: crates/engine/src/cmd/account.rs
 msgid "Forget Trusted Certificate"
 msgstr "Vertrouwd certificaat vergeten"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Forget all"
+msgstr "Alles vergeten"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
@@ -11669,6 +11693,12 @@ msgstr "Deze agenda openen"
 #, fuzzy
 msgid "Open {name}? {why}"
 msgstr "{name} openen? {why}"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Opened before"
+msgstr "Eerder geopend"
 
 #. interface
 #: crates/ui-egui/src/open_shared.rs
@@ -24546,6 +24576,12 @@ msgstr "{address} is ingesteld"
 #, fuzzy
 msgid "{address} isn't a shared mailbox open here."
 msgstr "{address} is geen gedeeld postvak dat hier geopend is."
+
+#. what a command says
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "{address} isn't among the shared mailboxes opened before"
+msgstr "{address} staat niet bij de eerder geopende gedeelde postvakken"
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs

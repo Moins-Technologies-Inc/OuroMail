@@ -522,6 +522,8 @@ const ACCOUNTS: &[&str] = &[
     "account.graphSwitch",
     "account.addSharedMailbox",
     "account.removeSharedMailbox",
+    // What is remembered of the shared mailboxes opened before, to be added again (Q4).
+    "account.forgetSharedBefore",
     // Another person's calendar, opened by address (#70): it reaches that person's mailbox with
     // the owner's sign-in, and removing one removes what is kept of it here.
     "calendar.openShared",
@@ -2788,6 +2790,20 @@ fn what_it_does(s: &Session, id: &str, params: &Value) -> String {
                 format!(
                     "hide the copy of the calendar of the shared mailbox {address} that is listed under Shared Calendars, and remove its events from this computer (the shared mailbox's own calendar stays)"
                 )
+            }
+        }
+        "account.forgetSharedBefore" => {
+            let a = p::id(params, "account")
+                .and_then(|a| s.mailbox.account(a))
+                .map_or_else(|| "an account that isn't there".to_string(), |a| clip(&a.email, 80));
+            match params.get("address") {
+                None | Some(Value::Null) => {
+                    format!("forget every shared mailbox that {a} opened before (none of them is offered again in Add Shared Mailbox)")
+                }
+                Some(address) => format!(
+                    "forget the shared mailbox {} that {a} opened before (it is no longer offered again in Add Shared Mailbox)",
+                    clip(address.as_str().unwrap_or("that isn't an address"), 80)
+                ),
             }
         }
         "account.removeSharedMailbox" => {

@@ -114,6 +114,7 @@ pub fn object(id: &str) -> Option<Object> {
         | "account.graphSwitch"
         | "account.addSharedMailbox"
         | "account.removeSharedMailbox"
+        | "account.forgetSharedBefore"
         | "account.setSenderAddresses"
         | "account.thinOffline"
         | "account.deviceLimits"

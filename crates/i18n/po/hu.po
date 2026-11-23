@@ -1066,6 +1066,12 @@ msgid "Add address"
 msgstr "Cím hozzáadása"
 
 #. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Add again"
+msgstr "Újbóli hozzáadás"
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Add an account"
@@ -4891,6 +4897,12 @@ msgstr "Keresés a címtárban: a rendszergazda jóváhagyása szükséges"
 #. interface
 #: crates/ui-egui/src/directory_search.rs
 #, fuzzy
+msgid "Directory search: not answered in this session"
+msgstr "Keresés a címtárban: ebben a munkamenetben nem érkezett válasz"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
 msgid "Directory search: not asked in this session"
 msgstr "Keresés a címtárban: ebben a munkamenetben még nem volt kérve"
 
@@ -6391,7 +6403,7 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr "Egyelőre az automatikus válaszok nem módosulnak: {error}"
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/ews_setup.rs crates/ui-egui/src/shared_before.rs
 #, fuzzy
 msgid "Forget"
 msgstr "Felejtsd el."
@@ -6403,10 +6415,22 @@ msgid "Forget Downloaded Calendar and Contacts"
 msgstr "Felejtsd el a letöltött naptárt és a kapcsolatfelvételeket"
 
 #. command label
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "Forget Shared Mailbox Opened Before"
+msgstr "Korábban megnyitott megosztott postafiók elfelejtése"
+
+#. command label
 #: crates/engine/src/cmd/account.rs
 #, fuzzy
 msgid "Forget Trusted Certificate"
 msgstr "Felejtsd el a megbízható tanúsítványt"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Forget all"
+msgstr "Az összes elfelejtése"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
@@ -12065,6 +12089,12 @@ msgstr "A naptár megnyitása"
 #, fuzzy
 msgid "Open {name}? {why}"
 msgstr "Megnyitja ezt: „{name}”? {why}"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Opened before"
+msgstr "Korábban megnyitottak"
 
 #. interface
 #: crates/ui-egui/src/open_shared.rs
@@ -25165,6 +25195,12 @@ msgstr "{address} be van állítva."
 #, fuzzy
 msgid "{address} isn't a shared mailbox open here."
 msgstr "A(z) {address} nincs megnyitva megosztott postafiókként."
+
+#. what a command says
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "{address} isn't among the shared mailboxes opened before"
+msgstr "{address} nincs a korábban megnyitott megosztott postafiókok között"
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs

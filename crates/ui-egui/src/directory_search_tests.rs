@@ -301,7 +301,8 @@ fn not_now_or_a_closed_question_sends_nothing_more_and_file_info_asks_again() {
     answer(&jobs, 0, owner, DirectoryOutcome::ConsentNeeded, &[], None);
     app.directory_tick_at(PAUSE_MS + 1.0);
     assert_eq!(field(&app).area, Area::Offer);
-    // Closed unanswered: a no for this session.
+    // Closed unanswered by the owner (his Escape, as the dialog marks it): a no for this session.
+    app.directory_search.declined_by_owner = Some(owner);
     app.dialog = None;
     app.directory_tick_at(PAUSE_MS + 2.0);
     app.execute("ui.dialog", json!({"name": "sharedMailbox", "account": owner})).unwrap();
@@ -491,3 +492,6 @@ fn not_now_is_the_owners_too() {
 
 #[path = "directory_search_window_tests.rs"]
 mod window_tests;
+
+#[path = "directory_search_renewal_tests.rs"]
+mod renewal_tests;

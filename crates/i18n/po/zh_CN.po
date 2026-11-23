@@ -1063,6 +1063,12 @@ msgid "Add address"
 msgstr "添加地址"
 
 #. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Add again"
+msgstr "重新添加"
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Add an account"
@@ -4896,6 +4902,12 @@ msgstr "目录搜索：需要管理员批准"
 #. interface
 #: crates/ui-egui/src/directory_search.rs
 #, fuzzy
+msgid "Directory search: not answered in this session"
+msgstr "目录搜索：本次会话中未作答"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
 msgid "Directory search: not asked in this session"
 msgstr "目录搜索：本次会话中尚未询问"
 
@@ -6393,7 +6405,7 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr "目前不会更改自动回复：{error}"
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/ews_setup.rs crates/ui-egui/src/shared_before.rs
 #, fuzzy
 msgid "Forget"
 msgstr "清除"
@@ -6405,10 +6417,22 @@ msgid "Forget Downloaded Calendar and Contacts"
 msgstr "清除已下载的日历和联系人"
 
 #. command label
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "Forget Shared Mailbox Opened Before"
+msgstr "忘记以前打开过的共享邮箱"
+
+#. command label
 #: crates/engine/src/cmd/account.rs
 #, fuzzy
 msgid "Forget Trusted Certificate"
 msgstr "取消信任证书"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Forget all"
+msgstr "全部忘记"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
@@ -12062,6 +12086,12 @@ msgstr "打开此日历"
 #, fuzzy
 msgid "Open {name}? {why}"
 msgstr "打开 {name}？{why}"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Opened before"
+msgstr "以前打开过的"
 
 #. interface
 #: crates/ui-egui/src/open_shared.rs
@@ -25142,6 +25172,12 @@ msgstr "{address} 已设置"
 #, fuzzy
 msgid "{address} isn't a shared mailbox open here."
 msgstr "{address} 不是此处打开的共享邮箱。"
+
+#. what a command says
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "{address} isn't among the shared mailboxes opened before"
+msgstr "{address} 不在以前打开过的共享邮箱中"
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs

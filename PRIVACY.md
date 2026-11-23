@@ -135,7 +135,9 @@ computer, for you, and for nothing else:
   15; the directory doesn't tell the two apart) come back, are shown in the dialog only, and go when it
   closes. Nothing of it is logged or kept, and an agent can't search for you;
 - reading and changing the mail of shared mailboxes you have been given access to (`Mail.ReadWrite.Shared`);
-  nothing of a shared mailbox is read until you open it;
+  nothing of a shared mailbox is read until you open it. When you remove one, its address and name stay
+  in your mailbox file (at most 20 for each account, never sent anywhere), so that Add Shared Mailbox can
+  offer it again under Opened before; Forget there removes one, Forget all every one;
 - sending from a shared mailbox (`Mail.Send.Shared`; an answer to a meeting or an invitation from a shared
   mailbox's calendar is sending from it);
 - reading and changing the calendars of shared mailboxes you have been given access to, and the calendars
@@ -158,9 +160,11 @@ The directory search's (`User.ReadBasic.All`) is asked for by itself too, for th
 first time you search in Add Shared Mailbox and your sign-in doesn't cover it, MailCraft asks you first
 (Allow, Not now), and only Allow opens Microsoft's page, for that permission alone. When it was given
 already (by you in an earlier session, or by your administrator for everybody through the link
-MailCraft gives administrators), your first search goes without a question. Not now, or closing the
-question, lasts for this session: nothing more is sent, and you type the shared mailbox's address as
-before. File › Info says where it stands in this session, with Ask again.
+MailCraft gives administrators), your first search goes without a question. Only you answer the
+question: your Not now, or your closing it, lasts for this session (nothing more is sent, and you type
+the shared mailbox's address as before); when an agent or a script closes it, or Microsoft's page is
+closed before it answers, nothing is recorded and you are asked again. File › Info says where it stands
+in this session, with Ask again.
 
 An account that signed in before MailCraft asked for all of this on one page is asked by the
 program, when it first needs one it doesn't have, in one question ("Keep in Step with Outlook", or

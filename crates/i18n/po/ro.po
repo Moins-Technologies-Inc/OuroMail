@@ -1063,6 +1063,12 @@ msgid "Add address"
 msgstr "Adăugare adresă"
 
 #. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Add again"
+msgstr "Adăugați din nou"
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Add an account"
@@ -4901,6 +4907,12 @@ msgstr "Căutare în director: necesită aprobarea administratorului"
 #. interface
 #: crates/ui-egui/src/directory_search.rs
 #, fuzzy
+msgid "Directory search: not answered in this session"
+msgstr "Căutare în director: fără răspuns în această sesiune"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
 msgid "Directory search: not asked in this session"
 msgstr "Căutare în director: nu s-a cerut încă în această sesiune"
 
@@ -6416,7 +6428,7 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr "Deocamdată, răspunsurile automate nu sunt modificate: {error}"
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/ews_setup.rs crates/ui-egui/src/shared_before.rs
 #, fuzzy
 msgid "Forget"
 msgstr "Uitare"
@@ -6428,10 +6440,22 @@ msgid "Forget Downloaded Calendar and Contacts"
 msgstr "Uitare calendar și contacte descărcate"
 
 #. command label
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "Forget Shared Mailbox Opened Before"
+msgstr "Uitați o cutie poștală partajată deschisă anterior"
+
+#. command label
 #: crates/engine/src/cmd/account.rs
 #, fuzzy
 msgid "Forget Trusted Certificate"
 msgstr "Uitare certificat de încredere"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Forget all"
+msgstr "Uitați tot"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
@@ -12105,6 +12129,12 @@ msgstr "Deschideți acest calendar"
 #, fuzzy
 msgid "Open {name}? {why}"
 msgstr "Deschideți {name}? {why}"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Opened before"
+msgstr "Deschise anterior"
 
 #. interface
 #: crates/ui-egui/src/open_shared.rs
@@ -25252,6 +25282,12 @@ msgstr "{address} este configurat"
 #, fuzzy
 msgid "{address} isn't a shared mailbox open here."
 msgstr "{address} nu este o cutie poștală partajată deschisă aici."
+
+#. what a command says
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "{address} isn't among the shared mailboxes opened before"
+msgstr "{address} nu se află printre cutiile poștale partajate deschise anterior"
 
 #. what a command says
 #: crates/engine/src/cmd/compose.rs

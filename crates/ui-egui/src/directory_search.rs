@@ -18,7 +18,8 @@
 //! answer is dropped; a wait to ask once more after a busy answer ends there, with nothing more
 //! sent. An answer for older text, for a dialog that went, for another mailbox, or for an account
 //! whose sign-in changed or went since it was asked is dropped, tokens and all; a search that
-//! stays unanswered [`ANSWER_DEADLINE_MS`] is called off and said to have failed. Keys and text
+//! stays unanswered [`ANSWER_DEADLINE_MS`] is called off and said to have failed, and no other
+//! search starts until the host's own one has ended (it may still be on its way). Keys and text
 //! that an agent or a script types into the window (`MailApp::driven`: `ui.text`, `ui.key`) are
 //! never searched; `ui.searchDirectory`, with which the owner's own scripts search, is never for
 //! agents, nor are `sync.directoryRequest` and the answer to the permission
@@ -27,7 +28,10 @@
 //! by number, and only the rows in view); it all goes with the dialog. The token for the directory
 //! is held in memory for the account's sign-in in the open mailbox only: it goes, with whether the
 //! permission was given, when another mailbox is opened, the account is removed, its sign-in
-//! changes (or an Undo changes it back) and when MailCraft's data is removed.
+//! changes (or an Undo changes it back), a mail sign-in is refused, and when MailCraft's data is
+//! removed. Each is also stamped with the mailbox opening and the sign-in it was had for
+//! (`Stamp`), and is used only while both are still those: a place that forgot to let go of it
+//! changes nothing.
 //!
 //! **The permission.** It is asked for by itself, the first time a search finds the sign-in doesn't
 //! cover it: the dialog asks the owner first, in its own words, with Allow and Not now, and only
@@ -35,10 +39,15 @@
 //! (`mailcraft_net::oauth::sign_in_for_directory`). When it was given already (by the owner in
 //! an earlier session, or by an administrator for everybody), the first search goes without a
 //! question. The question keeps the keyboard until it is answered: the search field takes no keys
-//! meanwhile (what was typed before stays), so typing answers nothing. Not now, Escape, or the
-//! dialog closed while it asks is a no for this session: nothing more is sent for it, and the
-//! address field and Add work as before. Allow that can't open the page says why in the dialog and
-//! leaves the question up. A no on the page, or one an administrator has to turn into a yes, is
+//! meanwhile (what was typed before stays), so typing answers nothing, and keys or clicks an agent
+//! or a script puts into the window never move the keyboard onto Allow or Not now. Only the
+//! owner answers it, a no included: his own Not now, Escape or close of the dialog is a no for
+//! this session (nothing more is sent for it, and the address field and Add work as before); when
+//! an agent or a script closes the dialog (`ui.closeDialog`, or a key or a click it puts in),
+//! nothing is recorded and the question comes again at the next search. Allow that can't open the
+//! page says why in the dialog and leaves the question up. A page called off before it answered
+//! (Cancel, or Add pressed while it waited) records no answer either: the question comes again,
+//! and File › Info says it wasn't answered, with Ask again. A no on the page, or one an administrator has to turn into a yes, is
 //! said in the dialog with the approval help the other permissions have. File › Info says where it
 //! stands in this session (nothing of it is kept across a restart, and nothing is asked of
 //! Microsoft to say it), with Ask again.
@@ -59,8 +68,11 @@ use crate::{MailApp, Tokens};
 
 /// How long the owner's typing pauses before a search goes, in milliseconds.
 pub const PAUSE_MS: f64 = 300.0;
-/// How long a search may go unanswered before the dialog says Microsoft couldn't be reached, in
-/// milliseconds: longer than the host's own limits (a token, the search, one wait and one more try).
+/// How long a search may go unanswered before the dialog stops waiting and says Microsoft couldn't
+/// be reached, in milliseconds. The host's own worst path is longer (a stale token's search, its
+/// wait and one more try, a new token and the same again: each request may take its patience to
+/// connect and as long again for the rest, about two minutes in all), so the host's job is called
+/// off then and no other search starts until it has ended.
 pub(crate) const ANSWER_DEADLINE_MS: f64 = 45_000.0;
 /// When a frame comes after a keystroke, so that the pause is seen to end though nothing moves.
 const WAKE: std::time::Duration = std::time::Duration::from_millis(320);
@@ -109,6 +121,9 @@ pub(crate) enum Permission {
     Approval,
     /// The organisation doesn't let its people give it.
     Organisation,
+    /// Microsoft's page was called off before it answered: no answer is recorded, and the question
+    /// comes again at the next search.
+    Unanswered,
 }
 
 /// The search under way and what is known of the permission, in the window.
@@ -121,6 +136,22 @@ pub struct DirectorySearching {
     tickets: u64,
     /// The account whose dialog puts the question now: closed unanswered, it is a no.
     offering: Option<Id>,
+    /// The account whose question the owner himself closed (his Escape or close, never an
+    /// agent's or a script's): that is his no.
+    pub(crate) declined_by_owner: Option<Id>,
+    /// What `perm` and `access` were had for, each: used only while it still holds.
+    perm_stamps: HashMap<Id, Stamp>,
+    access_stamps: HashMap<Id, Stamp>,
+    /// The host's job of a search the window stopped waiting for: no other starts until it ended.
+    lingering: Option<Receiver<DirectoryResult>>,
+}
+
+/// What something held for an account's directory was had for: the mailbox opening and the
+/// account as it was, its sign-in compared as the window compares it for its other tokens
+/// ([`MailApp::same_sign_in_identity`]).
+struct Stamp {
+    opening: u64,
+    owner: Account,
 }
 
 struct Pending {
@@ -199,6 +230,9 @@ pub struct DirectoryField {
     pub(crate) refusal: String,
     /// The question has taken the keyboard.
     question_focused: bool,
+    /// A frame of input an agent or a script put in went by while the question was up: the
+    /// keyboard goes back to the question.
+    refocus: bool,
     /// The keyboard is in the search field (or left it with this frame's Enter) or on a row: the
     /// dialog's Enter adds the marked row only then.
     pub(crate) keyboard_here: bool,
@@ -231,12 +265,13 @@ pub(crate) enum Pick {
 /// (as last drawn, `dialog` tall with a list `list` tall) and its lift above the middle are taken,
 /// between one row and [`ROWS_SHOWN`] rows. The title, the fields and the buttons stay on screen
 /// at the smallest window the app allows (760×480); the list scrolls inside.
-pub(crate) fn list_room(screen: f32, dialog: Option<f32>, list: f32) -> f32 {
+pub(crate) fn list_room(screen: f32, dialog: Option<f32>, list: f32, lift: f32) -> f32 {
     let full = ROWS_SHOWN * ROW;
     let Some(dialog) = dialog else { return full };
     let rest = (dialog - list).max(0.0);
-    // (Twice a dialog's lift above the middle, and a margin above and below.)
-    (screen - rest - 2.0 * 40.0 - 2.0 * 8.0).clamp(ROW, full)
+    // (Twice the dialog's lift above the middle, none in a short window, and a margin above and
+    // below.)
+    (screen - rest - 2.0 * lift - 2.0 * 8.0).clamp(ROW, full)
 }
 
 /// File › Info's line of an account: where the directory's permission stands in this session,
@@ -274,10 +309,51 @@ fn area_of_permission(perm: Option<Permission>) -> Option<Area> {
         Permission::Declined => Some(Area::Declined),
         Permission::Approval => Some(Area::Approval),
         Permission::Organisation => Some(Area::NotAllowed),
+        Permission::Unanswered => None,
     }
 }
 
 impl MailApp {
+    /// The stamp of what is had now for `account`.
+    fn directory_stamp(&self, account: Id) -> Option<Stamp> {
+        self.session.mailbox.account(account).map(|a| Stamp { opening: self.session.openings(), owner: a.clone() })
+    }
+
+    /// Whether `stamp` is still the mailbox open now and `account`'s sign-in as it is now.
+    fn stamp_holds(&self, account: Id, stamp: &Stamp) -> bool {
+        stamp.opening == self.session.openings()
+            && self.session.mailbox.account(account).is_some_and(|now| Self::same_sign_in_identity(&stamp.owner, now))
+    }
+
+    /// Where the directory's permission stands for `account`, if what was recorded was recorded
+    /// for the sign-in it has now in the mailbox open now. (One recorded without a stamp is a
+    /// test's; the window records it with one, [`MailApp::set_directory_perm`].)
+    pub(crate) fn held_perm(&self, account: Id) -> Option<Permission> {
+        let perm = self.directory_search.perm.get(&account).copied()?;
+        let holds = self.directory_search.perm_stamps.get(&account).is_none_or(|stamp| self.stamp_holds(account, stamp));
+        holds.then_some(perm)
+    }
+
+    /// The token for the directory held for `account`, still good at `now` (seconds) and had for
+    /// the sign-in it has now in the mailbox open now; else empty.
+    fn held_access(&self, account: Id, now: i64) -> String {
+        let holds = self.directory_search.access_stamps.get(&account).is_some_and(|stamp| self.stamp_holds(account, stamp));
+        if !holds {
+            return String::new();
+        }
+        self.directory_search.access.get(&account).filter(|t| t.fresh(now)).map(|t| t.access.clone()).unwrap_or_default()
+    }
+
+    /// Record where the directory's permission stands for `account`, stamped with the sign-in it
+    /// stands for.
+    pub(crate) fn set_directory_perm(&mut self, account: Id, perm: Permission) {
+        self.directory_search.perm.insert(account, perm);
+        match self.directory_stamp(account) {
+            Some(stamp) => self.directory_search.perm_stamps.insert(account, stamp),
+            None => self.directory_search.perm_stamps.remove(&account),
+        };
+    }
+
     /// Whether the dialog offers the search: a host that can search, or a script's answer.
     pub(crate) fn directory_offered(&self, field: &DirectoryField) -> bool {
         self.services.graph_directory.is_some() || field.scripted
@@ -301,7 +377,7 @@ impl MailApp {
             field.area = Area::Empty;
             return;
         }
-        if let Some(area) = area_of_permission(self.directory_search.perm.get(&account).copied()) {
+        if let Some(area) = area_of_permission(self.held_perm(account)) {
             field.area = area;
             return;
         }
@@ -317,18 +393,37 @@ impl MailApp {
     /// start the search the owner's pause asks for. (Public for a host's tests.)
     pub fn directory_tick_at(&mut self, now: f64) {
         self.poll_directory(now);
+        // Microsoft's page called off before it answered (Cancel, Add while it waited, another
+        // mailbox): no answer is recorded. The question comes again, and File › Info offers Ask
+        // again.
+        let waiting = self.signing_in.as_ref().filter(|s| s.directory).map(|s| s.account);
+        let called_off: Vec<Id> =
+            self.directory_search.perm.iter().filter(|(id, perm)| **perm == Permission::Asking && waiting != Some(**id)).map(|(id, _)| *id).collect();
+        for id in called_off {
+            self.set_directory_perm(id, Permission::Unanswered);
+            if let Some(Dialog::SharedMailbox { account, search, .. }) = &mut self.dialog
+                && *account == id
+                && search.area == Area::Asking
+            {
+                search.area = Area::Offer;
+            }
+        }
         let open = match &self.dialog {
             Some(Dialog::SharedMailbox { account, search, .. }) => Some((*account, search.area)),
             _ => None,
         };
-        // The question went with its dialog (Escape, its close, another account's): a no, for this
-        // session. Nothing else answers it: typing doesn't while it is up.
+        // The question went with its dialog. Only the owner's own Escape or close (as the dialog
+        // marks it) is his no, for this session: an agent's or a script's close (`ui.closeDialog`,
+        // a key or a click it put into the window) records nothing, and the question comes again
+        // at the next search. Typing doesn't answer it while it is up.
+        let declined = self.directory_search.declined_by_owner.take();
         if let Some(asked) = self.directory_search.offering
             && open.is_none_or(|(account, area)| account != asked || area != Area::Offer)
         {
             self.directory_search.offering = None;
-            if open.is_none_or(|(account, _)| account != asked) {
-                self.directory_search.perm.entry(asked).or_insert(Permission::Declined);
+            let unanswered = matches!(self.held_perm(asked), None | Some(Permission::Unanswered));
+            if declined == Some(asked) && open.is_none_or(|(account, _)| account != asked) && unanswered {
+                self.set_directory_perm(asked, Permission::Declined);
             }
         }
         if let Some((account, Area::Offer)) = open {
@@ -342,6 +437,14 @@ impl MailApp {
         }
         if self.directory_search.pending.is_some() {
             return;
+        }
+        // A search the window stopped waiting for may still be on its way: none other goes until
+        // the host's job has ended (what it brings then is nobody's).
+        if let Some(rx) = &self.directory_search.lingering {
+            if matches!(rx.try_recv(), Err(TryRecvError::Empty)) {
+                return;
+            }
+            self.directory_search.lingering = None;
         }
         let Some(Dialog::SharedMailbox { account, search, checking, .. }) = &mut self.dialog else { return };
         let Some(at) = search.typed_at else { return };
@@ -364,7 +467,7 @@ impl MailApp {
 
     /// Hand the search for `text` to the host: its ticket, or what the area says instead.
     fn start_directory_search(&mut self, account: Id, text: &str, now_ms: f64) -> Result<u64, Area> {
-        if let Some(area) = area_of_permission(self.directory_search.perm.get(&account).copied()) {
+        if let Some(area) = area_of_permission(self.held_perm(account)) {
             return Err(area);
         }
         if self.offline() {
@@ -379,7 +482,7 @@ impl MailApp {
         let text = asked.get("text").and_then(Value::as_str).unwrap_or_default().to_string();
         let oauth = owner.oauth.clone().filter(|o| o.provider == mailcraft_model::OAuthProvider::Microsoft).ok_or(Area::SignIn)?;
         let now = mailcraft_time::now();
-        let access = self.directory_search.access.get(&account).filter(|t| t.fresh(now)).map(|t| t.access.clone()).unwrap_or_default();
+        let access = self.held_access(account, now);
         let kept = self.tokens.get(&account).or(self.graph_tokens.get(&account)).map(|t| t.refresh.clone()).filter(|r| !r.is_empty());
         let refresh = kept.or_else(|| self.remembered("refresh", account)).unwrap_or_default();
         if access.is_empty() && refresh.is_empty() {
@@ -408,27 +511,34 @@ impl MailApp {
     /// was asked for, for the text it was asked for; anything else is dropped.
     fn poll_directory(&mut self, now: f64) {
         let Some(pending) = &self.directory_search.pending else { return };
-        let result = match pending.rx.try_recv() {
-            Ok(result) => Some(result),
+        let (result, late) = match pending.rx.try_recv() {
+            Ok(result) => (Some(result), false),
             Err(TryRecvError::Empty) if now - pending.started < ANSWER_DEADLINE_MS => return,
-            // No answer in time, or the host's thread went without one: Microsoft couldn't be
-            // reached, and Try again is offered.
-            Err(_) => None,
+            // No answer in time (the job may still be on its way), or the host's thread went
+            // without one: Microsoft couldn't be reached, and Try again is offered.
+            Err(TryRecvError::Empty) => (None, true),
+            Err(TryRecvError::Disconnected) => (None, false),
         };
-        let Some(pending) = self.directory_search.pending.take() else { return };
-        let result = result.unwrap_or_else(|| {
-            pending.cancel.store(true, Ordering::Relaxed);
-            let answer =
-                DirectoryAnswer { account: pending.account, ticket: pending.ticket, outcome: DirectoryOutcome::Unreachable, ..Default::default() };
-            DirectoryResult { answer, tokens: None }
-        });
+        let Some(Pending { account, opening, owner, ticket, cancel, rx, void, .. }) = self.directory_search.pending.take() else { return };
+        let result = match result {
+            Some(result) => result,
+            None => {
+                cancel.store(true, Ordering::Relaxed);
+                if late {
+                    self.directory_search.lingering = Some(rx);
+                }
+                DirectoryResult {
+                    answer: DirectoryAnswer { account, ticket, outcome: DirectoryOutcome::Unreachable, ..Default::default() },
+                    tokens: None,
+                }
+            }
+        };
         // Another mailbox took this one's place, the account went or its sign-in changed, or what
         // was held for it was let go of meanwhile: this answer is nobody's, tokens and all.
-        let same = self.session.mailbox.account(pending.account).is_some_and(|now| Self::same_sign_in_identity(&pending.owner, now));
-        if pending.void || pending.opening != self.session.openings() || !same {
+        let same = self.session.mailbox.account(account).is_some_and(|now| Self::same_sign_in_identity(&owner, now));
+        if void || opening != self.session.openings() || !same {
             return;
         }
-        let account = pending.account;
         let answer = result.answer;
         // How it went, and never what was asked or found.
         log::info!("directory search: {} entries ({:?})", answer.entries.len(), answer.outcome);
@@ -436,19 +546,17 @@ impl MailApp {
             self.keep_directory_tokens(account, tokens);
         }
         match answer.outcome {
-            DirectoryOutcome::SignInRefused => {
-                self.directory_search.access.remove(&account);
-            }
+            DirectoryOutcome::SignInRefused => self.drop_directory_token(account),
             DirectoryOutcome::ConsentNeeded => {
                 // (Given before, and taken back since: asked again.)
-                if self.directory_search.perm.get(&account) == Some(&Permission::Given) {
+                if self.held_perm(account) == Some(Permission::Given) {
                     self.directory_search.perm.remove(&account);
                 }
-                self.directory_search.access.remove(&account);
+                self.drop_directory_token(account);
             }
             _ => {}
         }
-        let perm = self.directory_search.perm.get(&account).copied();
+        let perm = self.held_perm(account);
         let Some(Dialog::SharedMailbox { account: shown, search, .. }) = &mut self.dialog else { return };
         if *shown != account || search.ticket == 0 || search.ticket != answer.ticket || answer.account != account {
             return;
@@ -472,9 +580,14 @@ impl MailApp {
     pub(crate) fn forget_directory(&mut self, account: Option<Id>) {
         let mine = |id: &Id| account.is_none_or(|a| a == *id);
         self.directory_search.access.retain(|id, _| !mine(id));
+        self.directory_search.access_stamps.retain(|id, _| !mine(id));
         self.directory_search.perm.retain(|id, _| !mine(id));
+        self.directory_search.perm_stamps.retain(|id, _| !mine(id));
         if self.directory_search.offering.as_ref().is_some_and(mine) {
             self.directory_search.offering = None;
+        }
+        if self.directory_search.declined_by_owner.as_ref().is_some_and(mine) {
+            self.directory_search.declined_by_owner = None;
         }
         if let Some(pending) = &mut self.directory_search.pending
             && mine(&pending.account)
@@ -482,6 +595,13 @@ impl MailApp {
             pending.cancel.store(true, Ordering::Relaxed);
             pending.void = true;
         }
+    }
+
+    /// Let go of the token for `account`'s directory alone (a mail sign-in refused, or the
+    /// directory's own refused): the next search asks for a new one.
+    pub(crate) fn drop_directory_token(&mut self, account: Id) {
+        self.directory_search.access.remove(&account);
+        self.directory_search.access_stamps.remove(&account);
     }
 
     /// Keep what a search or the page brought: the refresh token as the account's newest (and
@@ -500,7 +620,11 @@ impl MailApp {
             let now = mailcraft_time::now();
             let expires_at = tokens.expires_at.clamp(now, now.saturating_add(86_400));
             self.directory_search.access.insert(account, Tokens { expires_at, ..tokens });
-            self.directory_search.perm.insert(account, Permission::Given);
+            match self.directory_stamp(account) {
+                Some(stamp) => self.directory_search.access_stamps.insert(account, stamp),
+                None => self.directory_search.access_stamps.remove(&account),
+            };
+            self.set_directory_perm(account, Permission::Given);
         }
     }
 
@@ -516,7 +640,7 @@ impl MailApp {
         let begun = self.begin_sign_in(owner.id, oauth, &owner.email, String::new(), false, true);
         self.directory_next = false;
         begun?;
-        self.directory_search.perm.insert(account, Permission::Asking);
+        self.set_directory_perm(account, Permission::Asking);
         self.directory_search.offering = None;
         self.session.sync_status =
             tl!("Allow MailCraft to search your organisation's directory on the page that opened in your browser…").to_string();
@@ -544,7 +668,7 @@ impl MailApp {
             }
             Err(_) => Permission::Declined,
         };
-        self.directory_search.perm.insert(account, perm);
+        self.set_directory_perm(account, perm);
         if let Some(Dialog::SharedMailbox { account: shown, search, .. }) = &mut self.dialog
             && *shown == account
         {
@@ -567,7 +691,7 @@ impl MailApp {
     pub(crate) fn directory_line(&self, account: Id) -> Option<DirectoryLine> {
         self.session.mailbox.account(account).filter(|a| a.can_open_shared())?;
         let line = |said, again, help, copy| Some(DirectoryLine { said, again, help, copy });
-        match self.directory_search.perm.get(&account) {
+        match self.held_perm(account).as_ref() {
             None if self.services.graph_directory.is_some() => line(tl!("Directory search: not asked in this session"), false, false, false),
             None => None,
             Some(Permission::Given) => line(tl!("Directory search: allowed"), false, false, false),
@@ -575,6 +699,7 @@ impl MailApp {
             Some(Permission::Declined) => line(tl!("Directory search: not now (for this session)"), true, false, false),
             Some(Permission::Approval) => line(tl!("Directory search: needs your administrator's approval"), true, true, true),
             Some(Permission::Organisation) => line(tl!("Directory search: your organisation doesn't allow it"), true, true, false),
+            Some(Permission::Unanswered) => line(tl!("Directory search: not answered in this session"), true, false, false),
         }
     }
 
@@ -732,18 +857,33 @@ pub(crate) fn search_ui(app: &mut MailApp, ui: &mut Ui, t: &Theme, account: Id, 
             let asked = ui.label(tl!(
                 "Searching your organisation's directory needs your permission. Microsoft's page opens in your browser to ask you, once."
             ));
-            // The question takes the keyboard and keeps it until it is answered: keys typed go
-            // nowhere (Tab reaches Allow and Not now).
+            // The question takes the keyboard and keeps it until the owner answers: keys typed go
+            // nowhere (his own Tab reaches Allow and Not now). Input an agent or a script puts into
+            // the window never moves it: after such a frame it is back on the question.
             let held = ui.interact(asked.rect, ui.make_persistent_id("directoryQuestion"), Sense::focusable_noninteractive());
-            if !field.question_focused {
+            held.widget_info(|| {
+                egui::WidgetInfo::labeled(
+                    egui::Role::Group,
+                    true,
+                    tl!("Searching your organisation's directory needs your permission. Microsoft's page opens in your browser to ask you, once."),
+                )
+            });
+            if !field.question_focused || field.refocus || app.driven {
                 held.request_focus();
-                field.question_focused = true;
             }
+            field.question_focused = true;
+            field.refocus = app.driven;
             ui.horizontal(|ui| {
                 let allow = crate::widgets::primary_button(ui, tl!("Allow"), enabled);
                 app.hit.add("directoryAllow", 0, allow.rect);
                 let not_now = ui.add_enabled(enabled, egui::Button::new(tl!("Not now")));
                 app.hit.add("directoryNotNow", 0, not_now.rect);
+                // Where the keyboard is, on these two (the app's other buttons are as they were).
+                for button in [&allow, &not_now] {
+                    if button.has_focus() {
+                        ui.painter().rect_stroke(button.rect.expand(2.0), 5.0, egui::Stroke::new(2.0, t.accent), egui::StrokeKind::Outside);
+                    }
+                }
                 // The owner's own click: never input a script or an agent put into the window.
                 if allow.clicked() && !app.driven {
                     match app.run("ui.allowDirectory", json!({"account": account, "confirmed": true})) {
@@ -755,7 +895,7 @@ pub(crate) fn search_ui(app: &mut MailApp, ui: &mut Ui, t: &Theme, account: Id, 
                         Err(e) => field.refusal = e,
                     }
                 } else if not_now.clicked() && !app.driven {
-                    app.directory_search.perm.insert(account, Permission::Declined);
+                    app.set_directory_perm(account, Permission::Declined);
                     field.area = Area::Declined;
                 }
             });

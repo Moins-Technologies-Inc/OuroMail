@@ -882,6 +882,11 @@ msgid "Add address"
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/shared_before.rs
+msgid "Add again"
+msgstr ""
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 msgid "Add an account"
 msgstr ""
@@ -4066,6 +4071,11 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/directory_search.rs
+msgid "Directory search: not answered in this session"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
 msgid "Directory search: not asked in this session"
 msgstr ""
 
@@ -5313,7 +5323,7 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr ""
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/ews_setup.rs crates/ui-egui/src/shared_before.rs
 msgid "Forget"
 msgstr ""
 
@@ -5323,8 +5333,18 @@ msgid "Forget Downloaded Calendar and Contacts"
 msgstr ""
 
 #. command label
+#: crates/engine/src/cmd/shared.rs
+msgid "Forget Shared Mailbox Opened Before"
+msgstr ""
+
+#. command label
 #: crates/engine/src/cmd/account.rs
 msgid "Forget Trusted Certificate"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+msgid "Forget all"
 msgstr ""
 
 #. android, interface
@@ -10012,6 +10032,11 @@ msgstr ""
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AttachmentsView.kt crates/ui-egui/src/attachment_open.rs
 msgid "Open {name}? {why}"
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+msgid "Opened before"
 msgstr ""
 
 #. interface
@@ -20902,6 +20927,11 @@ msgstr ""
 #. what a command says
 #: crates/engine/src/cmd/calendar_opened.rs
 msgid "{address} isn't a shared mailbox open here."
+msgstr ""
+
+#. what a command says
+#: crates/engine/src/cmd/shared.rs
+msgid "{address} isn't among the shared mailboxes opened before"
 msgstr ""
 
 #. what a command says

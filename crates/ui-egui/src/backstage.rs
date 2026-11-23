@@ -346,11 +346,16 @@ fn info(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
                 ui.horizontal(|ui| {
                     ui.add_space(36.0);
                     let said = ui.label(egui::RichText::new(line.said).font(regular(11.5)).color(t.text_dim));
-                    if !app.directory_search.perm.contains_key(&a.id) {
+                    if app.held_perm(a.id).is_none() {
                         said.on_hover_text(tl!(
                             "If you allowed it before, or your administrator did for everybody, the first search in Add Shared Mailbox goes without a question."
                         ));
                     }
+                });
+                // (Its links on a line of their own, which wraps: nothing is pushed off a narrow page.)
+                if line.help || line.copy || line.again {
+                    ui.horizontal_wrapped(|ui| {
+                    ui.add_space(36.0);
                     if line.help && ui.link(tl!("What to do next")).clicked() {
                         let _ = app.run("ui.approvalHelp", json!({"account": a.id}));
                     }
@@ -367,6 +372,7 @@ fn info(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
                         }
                     }
                 });
+                }
             }
             ui.add_space(4.0);
         }

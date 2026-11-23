@@ -271,6 +271,7 @@ pub mod server_sync;
 #[cfg(test)]
 mod server_sync_tests;
 pub mod settings_notice;
+mod shared_before;
 mod shared_calendars;
 #[cfg(test)]
 mod shared_calendars_tests;
@@ -1843,6 +1844,9 @@ pub struct MailApp {
     /// Shared mailboxes just added in Add Shared Mailbox whose Inbox hasn't been read yet: kept
     /// only once it has been, and removed again when it can't be (#70).
     shared_checking: std::collections::HashSet<Id>,
+    /// Those of [`MailApp::shared_checking`] added again from Add Shared Mailbox's Opened before:
+    /// one that isn't kept is remembered there again (Q4).
+    shared_from_before: std::collections::HashSet<Id>,
     /// A shared mailbox being added whose first run waits for the Send/Receive under way, which
     /// was called off for it: it starts as soon as that one has stopped.
     shared_check_next: Option<Id>,
@@ -2151,6 +2155,7 @@ impl MailApp {
             shared_calendar_tokens: Default::default(),
             shared_refused: Default::default(),
             shared_checking: Default::default(),
+            shared_from_before: Default::default(),
             shared_check_next: None,
             mail_only_next: false,
             signing_in: None,
@@ -4595,6 +4600,8 @@ impl MailApp {
         if !consent {
             self.graph_tokens.remove(&account);
             self.tokens.remove(&account);
+            // (And the token for its directory, had with the same sign-in.)
+            self.drop_directory_token(account);
         }
         if let Err(e) = self.begin_sign_in(account, oauth, &owner.email, String::new(), false, true) {
             self.status(e);

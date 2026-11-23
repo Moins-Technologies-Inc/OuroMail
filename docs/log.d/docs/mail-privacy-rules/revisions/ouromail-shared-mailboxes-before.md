@@ -1,0 +1,1 @@
+| 2026-11-22 | minor | A removed shared mailbox is remembered under its account (address and name, at most 20, in the mailbox file only, never sent) for Add Shared Mailbox's Opened before; Forget is the owner's, an agent's `account.forgetSharedBefore` asks him |

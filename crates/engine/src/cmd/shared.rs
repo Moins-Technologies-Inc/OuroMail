@@ -62,9 +62,29 @@ pub fn specs() -> Vec<CommandSpec> {
             .pure()
             .params(r#"{"account": number (a work or school Microsoft account), "text": string (what the owner typed in Add Shared Mailbox's search)} — what a host is to search the account's organisation's directory for: the text as it is sent (control and invisible characters and `&` taken out, at most 64 characters), refused when fewer than two are left or the account has no directory (a personal Microsoft account, a shared mailbox, any other kind). Asks nothing of anybody: the window's host searches (`mailcraft_net::graph::search_directory`) with a token for User.ReadBasic.All, which the owner is asked for by itself. Never for agents: a search goes only on the owner's own typing. Answers {"account", "text"}"#),
         CommandSpec::new("account.removeSharedMailbox", "Remove Shared Mailbox", "File › Info", remove)
-            .params(r#"{"id": number (the shared mailbox's account id)} | {"account"?: number, "address": string} — closes a shared mailbox opened with account.addSharedMailbox and removes what is kept of it on this computer. Nothing on the server is touched. Answers {"deleted": id}"#)
+            .params(r#"{"id": number (the shared mailbox's account id)} | {"account"?: number, "address": string}, "remember"?: bool (default true) — closes a shared mailbox opened with account.addSharedMailbox and removes what is kept of it on this computer. Nothing on the server is touched. Its address and name are remembered under the account it was opened through (at most 20, newest first, in the mailbox file only, never sent anywhere), to be offered again under Opened before in Add Shared Mailbox; "remember": false keeps nothing. Answers {"deleted": id}"#)
             .when(has_shared),
+        CommandSpec::new("account.forgetSharedBefore", "Forget Shared Mailbox Opened Before", "Add Shared Mailbox", forget_before).params(
+            r#"{"account": number (the account the shared mailbox was opened through), "address"?: string (the shared mailbox's address; none: every one)} — forgets a shared mailbox that was opened under the account and removed since, or all of them: it is no longer offered again under Opened before in Add Shared Mailbox. Nothing else changes and nothing is asked of any server. Answers {"account", "forgotten": how many}"#,
+        ),
     ]
+}
+
+/// `account.forgetSharedBefore`: the shared mailboxes opened before under an account, one of them
+/// or every one, forgotten.
+fn forget_before(s: &mut Session, v: &Value) -> CmdResult {
+    let id = p::id_strict(v, "account")?.ok_or_else(|| bad("`account` is required"))?;
+    // (An address given is one, or nothing is forgotten; none is all.)
+    let address = match v.get("address") {
+        None | Some(Value::Null) => None,
+        Some(_) => Some(address(v)?),
+    };
+    let account = s.mailbox.account_mut(id).map_err(|_| failed!("no account with id {id}", id))?;
+    let forgotten = account.forget_shared(address.as_deref());
+    if let (Some(address), 0) = (&address, forgotten) {
+        return Err(failed!("{address} isn't among the shared mailboxes opened before", address));
+    }
+    Ok(json!({"account": id, "forgotten": forgotten}))
 }
 
 /// Whether the mailbox has an account a shared mailbox can be opened under: the window's rule
@@ -113,11 +133,18 @@ fn add(s: &mut Session, v: &Value) -> CmdResult {
     if s.mailbox.accounts.len() >= MAX_ACCOUNTS {
         return Err(fail("there are too many accounts"));
     }
-    // (Its name, as the owner gave it; else as its Sent Items name it, else its address.)
-    let name: String = p::str(v, "displayName").unwrap_or_default().chars().map(|c| if c.is_control() { ' ' } else { c }).take(254).collect();
+    // (Its name, as the owner gave it; else as it was when it was opened before; else as its Sent
+    // Items name it, else its address.)
+    let remembered = s.mailbox.account(owner).and_then(|o| o.shared_before_name(&address)).unwrap_or_default().to_string();
+    let given = p::str(v, "displayName").map(|given| given.chars().map(|c| if c.is_control() { ' ' } else { c }).take(254).collect::<String>());
+    let name = given.unwrap_or(remembered);
     let id = s.mailbox.add_shared_mailbox(owner, &address).map_err(|e| fail(e.to_string()))?;
     if let Ok(a) = s.mailbox.account_mut(id) {
         a.display_name = name.trim().to_string();
+    }
+    // Open again: not offered among those opened before.
+    if let Ok(o) = s.mailbox.account_mut(owner) {
+        o.forget_shared(Some(&address));
     }
     // Its calendar can be ticked from now on; nothing of it is asked of the server until then.
     super::remote::ensure_shared_calendars(s);
@@ -157,7 +184,16 @@ fn remove(s: &mut Session, v: &Value) -> CmdResult {
     if !account.is_shared() {
         return Err(failed!("{name} isn't a shared mailbox: remove it with account.remove", name = account.name));
     }
+    // Remembered under its owner, to be added again in one click (Q4), unless the window says it
+    // was never there for the owner (an address being checked that wasn't kept).
+    let remember = v.get("remember").and_then(Value::as_bool).unwrap_or(true);
+    let before = (account.shared_of, account.email.clone(), account.display_name.clone());
     let left = super::account::remove_with_content(s, id)?;
+    if let (true, (Some(owner), address, name)) = (remember, before)
+        && let Ok(o) = s.mailbox.account_mut(owner)
+    {
+        o.remember_shared(&address, &name);
+    }
     if s.mailbox.folder(s.view.folder).is_none() {
         s.view.folder = s.mailbox.default_account().and_then(|a| s.mailbox.folder_of_kind(a.id, FolderKind::Inbox)).unwrap_or(0);
     }
@@ -167,3 +203,7 @@ fn remove(s: &mut Session, v: &Value) -> CmdResult {
 #[cfg(test)]
 #[path = "shared_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "shared_before_tests.rs"]
+mod before_tests;

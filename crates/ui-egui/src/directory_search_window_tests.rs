@@ -514,12 +514,20 @@ fn file_info_says_where_the_permission_stands_in_words_of_its_own() {
             vec!["What to do next", "Copy a message for my administrator", "Ask again"],
         ),
         (Some(Permission::Organisation), "Directory search: your organisation doesn't allow it", vec!["What to do next", "Ask again"]),
+        (Some(Permission::Unanswered), "Directory search: not answered in this session", vec!["Ask again"]),
     ];
     for (perm, said, links) in cases {
         let (mut app, owner, _, _) = window();
         app.dialog = None;
-        if let Some(perm) = perm {
-            app.directory_search.perm.insert(owner, perm);
+        match perm {
+            // (Asking: Microsoft's page is open for it.)
+            Some(Permission::Asking) => {
+                app.begin_directory_sign_in(owner).unwrap();
+            }
+            Some(perm) => {
+                app.directory_search.perm.insert(owner, perm);
+            }
+            None => {}
         }
         app.execute("ui.backstage", json!({"value": true, "page": "info"})).unwrap();
         let mut h = harness(app);
