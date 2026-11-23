@@ -1,0 +1,1 @@
+| 2026-11-23 | ouromail-table-row: whether a layout table's columns fit side by side is judged by what their own cells want, so a long paragraph in a row spanning the table wraps inside it instead of stacking a row of small pictures; a layout table that is stacked keeps its own width and alignment. |
