@@ -70,6 +70,22 @@ impl MailApp {
         self.session.driver.calendar.forget_jobs();
     }
 
+    /// Let go of an in-flight calendar job or connection check if it belongs to `account` or uses
+    /// `account`'s sign-in (for a shared mailbox owned by `account`).
+    pub(crate) fn forget_calendar_jobs_for(&mut self, account: Id) {
+        if self.calendar.jobs.involves(account) || self.calendar.check_rx.as_ref().is_some_and(|(id, _, _)| *id == account) {
+            self.forget_calendar_jobs();
+        }
+    }
+
+    /// Let go of an in-flight calendar job if its launch-time mailbox or sign-in identity no longer
+    /// matches the live session.
+    pub(crate) fn forget_stale_calendar_job(&mut self) {
+        if self.calendar.jobs.busy() && !self.calendar.jobs.matches_session(&self.session) {
+            self.forget_calendar_jobs();
+        }
+    }
+
     /// Whether a calendar job is in flight.
     pub fn calendar_syncing(&self) -> bool {
         self.calendar.jobs.busy()
@@ -144,6 +160,9 @@ impl MailApp {
     /// (that goes first, in a job of its own). The answer is taken in like any other
     /// ([`poll_calendar`](Self::poll_calendar)). Why not, when it can't be asked now.
     pub(crate) fn calendar_job_around(&mut self, account: Id, day: mailcraft_time::Date) -> Result<(), String> {
+        if self.data_removed {
+            return Err(Self::data_removed_sync_refused());
+        }
         if self.services.graph.is_none() {
             return Err(tl!("This build can't reach the account's calendar.").to_string());
         }
@@ -166,6 +185,9 @@ impl MailApp {
     /// asked for. `false` when there is no sign-in to do it with (the owner isn't asked for one:
     /// Send/Receive does that).
     fn calendar_job(&mut self, plan: &CalendarPlan, now: f64) -> bool {
+        if self.data_removed {
+            return false;
+        }
         let account = plan.account;
         let Some(owner) = self.session.mailbox.account(account).cloned() else { return false };
         // A shared mailbox's calendars are read with the sign-in of the account it is opened
@@ -196,18 +218,30 @@ impl MailApp {
     /// The calendar job answered: keep its token, take in what the server said to the changes
     /// and what it has in the days that were asked for. (Public for a host's tests.)
     pub fn poll_calendar(&mut self) {
+        if self.data_removed {
+            self.forget_calendar_jobs();
+            self.shared_calendar_tokens.clear();
+            return;
+        }
         let answer = match self.calendar.jobs.poll(&self.session) {
             CalendarPolled::Nothing => return,
             CalendarPolled::Stale => {
-                // For a mailbox that has been closed since: let go of what the driver knew too (AU3-V8).
+                // For a mailbox or sign-in identity that changed since: let go of what the driver
+                // knew too (AU3-V8), and drop any shared calendar tokens whose stamp no longer holds.
                 self.forget_calendar_jobs();
+                self.prune_stale_shared_calendar_tokens();
                 return;
             }
             CalendarPolled::Answer(answer) => answer,
         };
-        let CalendarAnswer { account, carried, started, mut result, stopped_early, foreign } = *answer;
-        // A shared mailbox's calendars (#70): their own token, and their own permission.
-        let shared = self.session.mailbox.account(account).is_some_and(mailcraft_model::Account::is_shared);
+        self.apply_calendar_answer(*answer);
+    }
+
+    /// Apply a verified calendar job answer to token caches and session state.
+    /// Uses `answer.is_shared` from launch metadata so a removed shared mailbox can never fall
+    /// through into `keep_graph_tokens` or evict `graph_tokens` instead of `shared_calendar_tokens`.
+    pub(crate) fn apply_calendar_answer(&mut self, answer: CalendarAnswer) {
+        let CalendarAnswer { account, is_shared: shared, carried, started, mut result, stopped_early, foreign } = answer;
         if result.consent_needed {
             log::info!("calendar, account {account}: {}", consent_wait(shared));
         }
@@ -221,7 +255,6 @@ impl MailApp {
         // Somebody else's sign-in: the host refused the answer whole (nothing of it is taken in and
         // its token is not kept); the owner is told who to sign in as, as for any sign-in (#103).
         if let Some(foreign) = &foreign {
-            let shared = self.session.mailbox.account(account).is_some_and(mailcraft_model::Account::is_shared);
             let signer = if shared { self.session.mailbox.owner_of(account).map(|o| o.id) } else { Some(account) };
             errors.push(self.say_signed_in_as_other(signer.unwrap_or(account), &foreign.signed_in_as));
         }
@@ -238,9 +271,14 @@ impl MailApp {
                 if let Some(owner) = owner.filter(|owner| !self.signed_in_as_other(*owner, &tokens)) {
                     self.keep_shared_calendar_tokens(account, owner, tokens);
                 }
-            } else {
+            } else if self.session.mailbox.account(account).is_some_and(|a| !a.is_shared()) {
                 self.keep_graph_tokens(account, tokens);
             }
+        }
+        // If the target account vanished or changed kind before this answer was applied, drop the
+        // stale payload cleanly without updating engine state.
+        if self.session.mailbox.account(account).is_none_or(|live| live.is_shared() != shared) {
+            return;
         }
         if shared {
             self.shared_calendars_send_answered(account, &result, &mut errors);

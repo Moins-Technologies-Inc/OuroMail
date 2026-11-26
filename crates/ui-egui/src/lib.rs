@@ -270,6 +270,8 @@ pub mod server_sync;
 #[cfg(test)]
 mod server_sync_tests;
 pub mod settings_notice;
+#[cfg(test)]
+mod shared_calendar_token_tests;
 mod shared_calendars;
 #[cfg(test)]
 mod shared_calendars_tests;
@@ -1806,7 +1808,7 @@ pub struct MailApp {
     subscribed: subscribed::Subscribed,
     /// The access tokens that read shared mailboxes' calendars (they carry
     /// `Calendars.ReadWrite.Shared`, which a shared mailbox's mail token needn't), in memory only.
-    shared_calendar_tokens: std::collections::HashMap<Id, Tokens>,
+    shared_calendar_tokens: std::collections::HashMap<Id, shared_calendars::StampedSharedCalendarToken>,
     /// Shared mailboxes whose server won't let the owner in, and why (no Full Access, no such
     /// mailbox…): shown as No access, and not read again by a Send/Receive that started by
     /// itself, only by one the owner asks for (#70).
@@ -2677,6 +2679,8 @@ impl MailApp {
             // What the window keeps for it (the command took what came from its server).
             self.forget_favorites(account);
             self.graph_tokens.remove(&account);
+            self.drop_shared_calendar_tokens_for(account);
+            self.forget_calendar_jobs_for(account);
             self.passwords.remove(&account);
             self.dav_passwords.retain(|(id, _), _| *id != account);
             self.tokens.remove(&account);
@@ -2685,6 +2689,10 @@ impl MailApp {
             self.ews_signed_in.remove(&account);
             self.ews_certificate.remove(&account);
             self.forget_account_secrets(&gone);
+        }
+        if r.is_ok() && id == "account.removeSharedMailbox" {
+            self.prune_stale_shared_calendar_tokens();
+            self.forget_stale_calendar_job();
         }
         // A calendar and contacts server changed or gone: what was kept for the old one is not
         // given to the new (#209).
@@ -2697,6 +2705,8 @@ impl MailApp {
             && self.session.mailbox.account(before.id).is_some_and(|after| !Self::same_sign_in_identity(before, after))
         {
             self.cancel_pending_sign_in(before.id);
+            self.drop_shared_calendar_tokens_for(before.id);
+            self.forget_calendar_jobs_for(before.id);
         }
         // Servers changed: what was kept for the old ones is not given to the new, and the owner
         // is asked again.
@@ -2724,13 +2734,21 @@ impl MailApp {
                 // What it had for a calendar and contacts server that it doesn't now (or not for
                 // long): the same clean-up as the change that made it.
                 self.drop_changed_dav_secrets(&was_account);
-                if self.session.mailbox.account(account).map(keys) != Some(was) {
+                let current = self.session.mailbox.account(account);
+                if current.map(keys) != Some(was) {
                     self.passwords.remove(&account);
                     self.tokens.remove(&account);
                     self.graph_tokens.remove(&account);
                     self.jmap_refused.remove(&account);
                 }
+                if !current.is_some_and(|after| Self::same_sign_in_identity(&was_account, after)) {
+                    self.cancel_pending_sign_in(account);
+                    self.drop_shared_calendar_tokens_for(account);
+                    self.forget_calendar_jobs_for(account);
+                }
             }
+            self.prune_stale_shared_calendar_tokens();
+            self.forget_stale_calendar_job();
         }
         // A new arrangement moves the rows: the list scrolls to the selected message, from the
         // window's menus and keys as from an agent through the control channel (#1511). With
@@ -3245,16 +3263,8 @@ impl MailApp {
     /// Whether a pending sign-in still belongs to the saved account. The storage key binds
     /// its address and endpoints; login, transport security, ownership and OAuth registration
     /// also belong to its credential identity. Names, signatures and download preferences do not.
-    fn same_sign_in_identity(before: &mailcraft_model::Account, after: &mailcraft_model::Account) -> bool {
-        before.id == after.id
-            && before.kind == after.kind
-            && before.shared_of == after.shared_of
-            && before.login() == after.login()
-            && Self::secret_key("refresh", before) == Self::secret_key("refresh", after)
-            && before.incoming.as_ref().map(|s| s.security) == after.incoming.as_ref().map(|s| s.security)
-            && before.outgoing.as_ref().map(|s| s.security) == after.outgoing.as_ref().map(|s| s.security)
-            && before.oauth.as_ref().map(|o| (o.provider, o.client_id.as_str(), o.tenant.as_str()))
-                == after.oauth.as_ref().map(|o| (o.provider, o.client_id.as_str(), o.tenant.as_str()))
+    pub(crate) fn same_sign_in_identity(before: &mailcraft_model::Account, after: &mailcraft_model::Account) -> bool {
+        mailcraft_host::job_sign_in::same_sign_in_identity(before, after)
     }
 
     /// Stop only this account's pending sign-in and remove its waiting text.
@@ -3751,6 +3761,11 @@ impl MailApp {
         self.passwords.insert(account, password);
     }
 
+    /// The standard refusal shown when MailCraft's data has already been removed.
+    pub(crate) fn data_removed_sync_refused() -> String {
+        tl!("MailCraft's data has been removed: nothing is sent or received").to_string()
+    }
+
     /// Start a Send/Receive for an account (default: the first one with a server). Asks for the
     /// password the first time, or has the owner sign in on the provider's page; the answer is
     /// kept in memory until the app closes, and by the operating system when that is wanted.
@@ -3764,7 +3779,7 @@ impl MailApp {
             return self.ask_to_confirm_servers();
         }
         if self.data_removed {
-            return Err(tl!("MailCraft's data has been removed: nothing is sent or received").to_string());
+            return Err(Self::data_removed_sync_refused());
         }
         // Work Offline: nothing goes to a server; what is sent waits in the Outbox.
         if self.offline() {
@@ -4089,6 +4104,7 @@ impl MailApp {
             self.sync_after_secrets.clear();
             self.tokens.clear();
             self.graph_tokens.clear();
+            self.shared_calendar_tokens.clear();
             self.jmap_refused.clear();
             self.jmap_send_asks.clear();
             self.ews_unreadable.clear();
@@ -4525,6 +4541,10 @@ impl MailApp {
     /// have), and is told how when they didn't.
     fn graph_mail_needs_sign_in(&mut self, account: Id, quiet: bool, after_sign_in: bool, consent: bool) {
         self.session.sync_status.clear();
+        if !consent {
+            self.drop_shared_calendar_tokens_for(account);
+            self.forget_calendar_jobs_for(account);
+        }
         let Some(owner) = self.session.mailbox.account(account).cloned() else { return };
         let why = if consent { "the sign-in needs permission for the mail" } else { "the sign-in was refused" };
         // Just signed in, and still refused: another trip to Microsoft's page wouldn't change it.
@@ -4713,6 +4733,7 @@ impl MailApp {
     /// at the foot of the window. Never for a sign-in nobody asked for, and never over another
     /// dialog.
     fn sign_in_came_to_nothing(&mut self, account: Id, error: &str, asked_for: bool) {
+        self.drop_shared_calendar_tokens_for(account);
         log::warn!("sign-in, account {account}: ended without signing in ({:?})", approval::SignInEnd::of(error));
         if approval::SignInEnd::of(error) == approval::SignInEnd::Approval && asked_for && self.dialog.is_none() {
             let dialog = dialogs::Dialog::open("account", self, &json!({"id": account, "page": "approval"}));

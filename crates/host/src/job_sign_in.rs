@@ -45,3 +45,24 @@ pub fn foreign_sign_in(signer: &Account, tokens: Option<&Tokens>) -> Option<Fore
     }
     Some(ForeignSignIn { signed_in_as: tokens.email.trim().chars().take(LONGEST_ADDRESS).collect() })
 }
+
+/// Normalized mailbox address for identity binding (trimmed, ASCII lower-cased).
+pub fn normalized_address(email: &str) -> String {
+    email.trim().to_ascii_lowercase()
+}
+
+/// Whether two snapshots of an account share the same sign-in credential identity.
+/// The storage key binds its address and endpoints; login, transport security, ownership and
+/// OAuth registration also belong to its credential identity. Names, signatures and download
+/// preferences do not.
+pub fn same_sign_in_identity(before: &Account, after: &Account) -> bool {
+    before.id == after.id
+        && before.kind == after.kind
+        && before.shared_of == after.shared_of
+        && before.login() == after.login()
+        && crate::secrets::secret_key("refresh", before) == crate::secrets::secret_key("refresh", after)
+        && before.incoming.as_ref().map(|s| s.security) == after.incoming.as_ref().map(|s| s.security)
+        && before.outgoing.as_ref().map(|s| s.security) == after.outgoing.as_ref().map(|s| s.security)
+        && before.oauth.as_ref().map(|o| (o.provider, o.client_id.as_str(), o.tenant.as_str()))
+            == after.oauth.as_ref().map(|o| (o.provider, o.client_id.as_str(), o.tenant.as_str()))
+}

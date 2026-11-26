@@ -424,6 +424,8 @@ impl MailApp {
         }
         self.shared_refused.remove(&shared);
         self.graph_tokens.remove(&shared);
+        self.drop_shared_calendar_tokens_for(shared);
+        self.forget_calendar_jobs_for(shared);
         if self.session.mailbox.account(shared).is_some_and(Account::is_shared) {
             let _ = self.execute("account.removeSharedMailbox", json!({"id": shared}));
         }
