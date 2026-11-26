@@ -107,6 +107,6 @@ unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
-    # local build only (ouromail/main): the winit clone of Cargo.toml's [patch.crates-io] (#1805)
-    "file:///home/donielmoins/dev/mailcraft-workspace/forks/winit",
+    # OuroMail only (ouromail/main): the public winit fork of Cargo.toml's [patch.crates-io] (#1805)
+    "https://github.com/Moins-Technologies-Inc/winit",
 ]

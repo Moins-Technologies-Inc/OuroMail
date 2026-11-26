@@ -1,0 +1,1 @@
+| 2026-11-23 | minor | First version and Round 2 hardening (ouromail-ci): monotonic `r<count>.g<sha8>` version, main-ref publish gate, host-isolated cache metadata and non-symlink output collection, transactional updater backups (ext4 vs btrfs), accurate tag-write/image-refresh/attestation-pin docs |

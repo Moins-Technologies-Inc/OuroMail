@@ -1,0 +1,228 @@
+# OuroMail's automatic build (the branch ouromail/main of Moins-Technologies-Inc/OuroMail, not
+# upstream MailCraft): the full CI (`cargo xtask ci`), then the Arch Linux package, published with
+# a build provenance attestation as the rolling prerelease `ouromail-latest`, which
+# `ouromail-update` installs from (docs/ouromail-builds.md).
+#
+# Triggers: the jobs that build run on the organisation's SELF-HOSTED runner, and this repository is
+# public. A self-hosted runner must never run code from somebody without write access, so this
+# workflow starts only on a push to ouromail/main and by hand (workflow_dispatch), which both need
+# write access; NEVER add pull_request, pull_request_target, workflow_run, issues, issue_comment
+# or schedule triggers.
+#
+# What runs where: `ci` and `package` run on the self-hosted runner (labels `podman`, `ouromail`),
+# each in a throwaway Arch Linux container (packaging/arch-ouromail/runner.sh, container.sh) that
+# sees the checkout read-only, this branch's own cache directory and, for `package`, an output
+# directory; no GitHub token and nothing of the runner's home. Both read the repository and
+# nothing else, and the checkout keeps no credential. `publish` is the only job that may write (the
+# release, its files, its tag and the attestation); it runs ONLY on `refs/heads/ouromail/main`, on
+# GitHub's own runner, not the self-hosted one, runs no code from the repository and no container:
+# it takes the package and SHA256SUMS that `package` uploaded, checks them against the digest
+# `package` gave, attests the package and replaces the release's files. No job holds a signing
+# secret (`cargo xtask workflows`).
+name: OuroMail package
+
+on:
+  push:
+    branches: [ouromail/main]
+  workflow_dispatch:
+
+permissions: {}
+
+# One run per branch: a newer push cancels the older run (runner.sh removes any container it left).
+concurrency:
+  group: ouromail-package-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The rolling release whose files this workflow replaces.
+  RELEASE_TAG: ouromail-latest
+  # On the self-hosted runner: the build cache (one directory per branch and toolchain, capped by
+  # runner.sh) and the Arch Linux image the jobs run in (brought up to date by pacman in each job).
+  OUROMAIL_CACHE: /srv/ci-cache
+  OUROMAIL_IMAGE: docker.io/library/archlinux:base-devel
+
+jobs:
+  ci:
+    name: CI (cargo xtask ci)
+    runs-on: [self-hosted, Linux, X64, podman, ouromail]
+    timeout-minutes: 240
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Packaging checks and cargo xtask ci, in an Arch Linux container
+        run: bash packaging/arch-ouromail/runner.sh ci
+      # The runner keeps its work directory between jobs: nothing of this one is left for the next.
+      - name: Empty the work directory
+        if: always()
+        run: find "$GITHUB_WORKSPACE" -mindepth 1 -delete
+
+  package:
+    name: Arch package
+    needs: ci
+    runs-on: [self-hosted, Linux, X64, podman, ouromail]
+    timeout-minutes: 180
+    permissions:
+      contents: read
+    outputs:
+      file: ${{ steps.result.outputs.file }}
+      sums: ${{ steps.result.outputs.sums }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: makepkg and the smoke checks, in an Arch Linux container
+        run: bash packaging/arch-ouromail/runner.sh package
+      - id: result
+        name: The package and its digest
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/ouromail-out"
+          p=$out
+          while [ "$p" != / ] && [ "$p" != . ]; do
+            if [ -L "$p" ]; then
+              echo "::error::refusing symlink component $p in package output path"
+              exit 1
+            fi
+            p=$(dirname "$p")
+          done
+          if [ ! -d "$out" ]; then
+            echo "::error::package output directory $out is missing or not a directory"
+            exit 1
+          fi
+          bad=$(find "$out" -mindepth 1 \( -type l -o ! -type f \) -print -quit)
+          nested=$(find "$out" -mindepth 2 -print -quit)
+          if [ -n "$bad" ] || [ -n "$nested" ]; then
+            echo "::error::unexpected or non-regular entry in package output: ${bad:-$nested}"
+            exit 1
+          fi
+          mapfile -d '' entries < <(find "$out" -mindepth 1 -maxdepth 1 -type f ! -type l -printf '%f\0' | LC_ALL=C sort -z)
+          if [ "${#entries[@]}" -ne 2 ]; then
+            echo "::error::expected exactly 2 regular files in $out, found ${#entries[@]}"
+            exit 1
+          fi
+          if [ "${entries[0]}" = SHA256SUMS ]; then
+            pkg_entry=${entries[1]}
+          elif [ "${entries[1]}" = SHA256SUMS ]; then
+            pkg_entry=${entries[0]}
+          else
+            echo "::error::SHA256SUMS missing from package output"
+            exit 1
+          fi
+          pkg_re='^ouromail-[0-9]+\.[0-9]+\.[0-9]+\.r[1-9][0-9]*\.g[0-9a-f]{8}-[1-9][0-9]*-x86_64\.pkg\.tar\.zst$'
+          if ! [[ "$pkg_entry" =~ $pkg_re ]]; then
+            echo "::error::unexpected package file name: $pkg_entry"
+            exit 1
+          fi
+          cd "$out"
+          ls -l
+          sums_size=$(wc -c < SHA256SUMS)
+          if [ "$sums_size" -eq 0 ] || [ "$sums_size" -gt 4096 ]; then
+            echo "::error::SHA256SUMS has unexpected size ($sums_size bytes)"
+            exit 1
+          fi
+          line_re='^[0-9a-f]{64}  ouromail-[0-9]+\.[0-9]+\.[0-9]+\.r[1-9][0-9]*\.g[0-9a-f]{8}-[1-9][0-9]*-x86_64\.pkg\.tar\.zst$'
+          if [ "$(wc -l < SHA256SUMS)" != 1 ] \
+            || [ "$(grep -cE "$line_re" SHA256SUMS || true)" != 1 ] \
+            || [ "$(grep -cvE "$line_re" SHA256SUMS || true)" != 0 ] \
+            || [ "$(tail -c 1 SHA256SUMS | od -An -tx1 | tr -d ' \n')" != 0a ]; then
+            echo "::error::SHA256SUMS does not name exactly one monotonic package"
+            exit 1
+          fi
+          file=$(cut -d' ' -f3- SHA256SUMS)
+          if [ "$file" != "$pkg_entry" ] || [ -L "$file" ] || [ ! -f "$file" ]; then
+            echo "::error::SHA256SUMS entry '$file' does not match regular package '$pkg_entry'"
+            exit 1
+          fi
+          sha256sum -c --strict SHA256SUMS
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "sums=$(sha256sum SHA256SUMS | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      # Uploaded to GitHub, not left on the runner: `publish` downloads it on GitHub's runner and
+      # checks it against the digest above.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ouromail-package
+          path: ${{ runner.temp }}/ouromail-out/
+          include-hidden-files: false
+          if-no-files-found: error
+          retention-days: 7
+      - name: Empty the work directory and the output
+        if: always()
+        run: |
+          find "$GITHUB_WORKSPACE" -mindepth 1 -delete
+          rm -rf -- "$RUNNER_TEMP/ouromail-out"
+
+  publish:
+    name: Publish the release
+    needs: package
+    if: github.ref == 'refs/heads/ouromail/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write # the release, its files and its tag
+      id-token: write # the attestation's signing certificate
+      attestations: write # the attestation itself
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ouromail-package
+          path: ${{ runner.temp }}/ouromail
+      - name: Check the files against the package job's digest
+        env:
+          FILE: ${{ needs.package.outputs.file }}
+          SUMS: ${{ needs.package.outputs.sums }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          [ "$REF" = "refs/heads/ouromail/main" ]
+          cd "$RUNNER_TEMP/ouromail"
+          pkg_re='^ouromail-[0-9]+\.[0-9]+\.[0-9]+\.r[1-9][0-9]*\.g[0-9a-f]{8}-[1-9][0-9]*-x86_64\.pkg\.tar\.zst$'
+          [[ "$FILE" =~ $pkg_re ]]
+          bad=$(find . -mindepth 1 \( -type l -o ! -type f \) -print -quit)
+          nested=$(find . -mindepth 2 -print -quit)
+          [ -z "$bad" ] && [ -z "$nested" ]
+          [ "$(find . -mindepth 1 -maxdepth 1 -type f ! -type l -printf '%f\n' | LC_ALL=C sort | tr '\n' ' ')" = "SHA256SUMS $FILE " ]
+          line_re='^[0-9a-f]{64}  ouromail-[0-9]+\.[0-9]+\.[0-9]+\.r[1-9][0-9]*\.g[0-9a-f]{8}-[1-9][0-9]*-x86_64\.pkg\.tar\.zst$'
+          [ "$(wc -l < SHA256SUMS)" = 1 ]
+          [ "$(grep -cE "$line_re" SHA256SUMS || true)" = 1 ]
+          [ "$(grep -cvE "$line_re" SHA256SUMS || true)" = 0 ]
+          [ "$(tail -c 1 SHA256SUMS | od -An -tx1 | tr -d ' \n')" = 0a ]
+          echo "$SUMS  SHA256SUMS" | sha256sum -c --strict -
+          sha256sum -c --strict SHA256SUMS
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ runner.temp }}/ouromail/${{ needs.package.outputs.file }}
+      - name: Replace the files of the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          FILE: ${{ needs.package.outputs.file }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/ouromail"
+          title="OuroMail, latest build of $BRANCH"
+          notes="The latest build of \`$BRANCH\`: commit $SHA, built $(date -u '+%Y-%m-%d %H:%M UTC') by $RUN_URL.
+
+          Install or update with \`ouromail-update\` (docs/ouromail-builds.md). By hand: \`sha256sum -c SHA256SUMS\`, then \`gh attestation verify $FILE --repo $GH_REPO --signer-workflow $GH_REPO/.github/workflows/ouromail-package.yml --source-ref refs/heads/ouromail/main\`, then \`sudo pacman -U $FILE\`.
+
+          A rolling prerelease: its files are replaced by every build, and it is never the repository's latest release."
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh api -X PATCH "repos/$GH_REPO/git/refs/tags/$RELEASE_TAG" -f sha="$SHA" -F force=true > /dev/null
+            gh release edit "$RELEASE_TAG" --title "$title" --notes "$notes" --prerelease
+          else
+            gh release create "$RELEASE_TAG" --target "$SHA" --title "$title" --notes "$notes" --prerelease --latest=false
+          fi
+          gh release upload "$RELEASE_TAG" "$FILE" --clobber
+          gh release upload "$RELEASE_TAG" SHA256SUMS --clobber
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' | while IFS= read -r asset; do
+            if [ "$asset" != "$FILE" ] && [ "$asset" != SHA256SUMS ]; then
+              gh release delete-asset "$RELEASE_TAG" "$asset" --yes
+            fi
+          done
+          gh release view "$RELEASE_TAG" --json tagName,isPrerelease,assets --jq '{tagName, isPrerelease, assets: [.assets[] | {name, size, digest}]}'

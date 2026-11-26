@@ -1,0 +1,112 @@
+# SPDX-FileCopyrightText: MailCraft contributors
+# SPDX-License-Identifier: MIT OR Apache-2.0
+#
+# Arch Linux package of OuroMail (ouromail/main), built from the checked-out tree this file is in:
+# no source tarball, nothing fetched but the crates Cargo.lock names (and the winit fork there).
+# Built by .github/workflows/ouromail-package.yml and published as the rolling release
+# `ouromail-latest`; see docs/ouromail-builds.md. By hand, from a clean full-history checkout:
+#   cd packaging/arch-ouromail && makepkg
+# The version is the workspace's (Cargo.toml) plus full commit count and short commit hash:
+#   0.14.0.r<commit count>.g<8-char sha>
+# This increases strictly with every commit (vercmp confirms it is also newer than earlier
+# hash-only packages r85dd1df9 and r6b3fafce without an epoch) while preserving Cargo's 0.14.0.
+# A shallow clone, missing git history, or a tree with uncommitted changes to tracked files is
+# refused, since the version would not be monotonic or would not say what was built
+# (OUROMAIL_ALLOW_DIRTY=1 overrides only the dirty check, for testing this recipe).
+# CARGO_HOME and CARGO_TARGET_DIR may name a cache outside the tree; by default both are in $srcdir.
+
+_root=$(cd "$startdir/../.." && pwd -P)
+_upstreamver=$(sed -n 's/^version = "\(.*\)"/\1/p' "$_root/Cargo.toml" | head -n 1)
+_is_shallow=$(git -C "$_root" rev-parse --is-shallow-repository 2>/dev/null || echo invalid)
+_commit=$(git -C "$_root" rev-parse --verify HEAD 2>/dev/null || true)
+_short=${_commit:0:8}
+_revcount=$(git -C "$_root" rev-list --count HEAD 2>/dev/null || true)
+
+pkgname=ouromail
+pkgver=${_upstreamver}.r${_revcount}.g${_short}
+pkgrel=1
+pkgdesc="OuroMail: mail, calendar, contacts and tasks (MailCraft with the Ouro theme, icons and Entra app)"
+arch=(x86_64)
+url="https://github.com/Moins-Technologies-Inc/OuroMail"
+license=('MIT' 'Apache-2.0')
+depends=(glibc hicolor-icon-theme libgcc curl libxkbcommon libxkbcommon-x11 libglvnd)
+optdepends=(
+	'github-cli: ouromail-update checks the build provenance attestation'
+	'sudo: ouromail-update installs with sudo pacman -U'
+	'wayland: run natively on a Wayland compositor'
+	'libx11: run on X11'
+	'libxcursor: cursor themes on X11'
+	'libxi: input events on X11'
+	'xdg-utils: open attachments and links with the desktop opener'
+	'xdg-desktop-portal: native file dialogs and desktop integration'
+)
+makedepends=(cargo git)
+options=(!debug)
+
+_icons=(512 256 128 64 48 32 24 16)
+
+_srcenv() {
+	cd "$_root"
+	export CARGO_HOME="${CARGO_HOME:-$srcdir/cargo-home}"
+	export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$srcdir/target}"
+	if check_option debug y; then
+		export CARGO_PROFILE_RELEASE_DEBUG=2
+		export CARGO_PROFILE_RELEASE_STRIP=false
+	fi
+	if check_option lto y; then
+		export CARGO_PROFILE_RELEASE_LTO=thin
+		export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+	fi
+	export CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+	CFLAGS+=' -fno-lto'
+	export RUSTUP_TOOLCHAIN=1.98.1
+	export RUSTUP_AUTO_INSTALL=0
+	export MAILCRAFT_BUILD_SHA="$_short"
+}
+
+prepare() {
+	if ! [[ "$_upstreamver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+		error "workspace version '%s' in %s/Cargo.toml is not X.Y.Z" "$_upstreamver" "$_root"
+		return 1
+	fi
+	if [ "$_is_shallow" != false ]; then
+		error "%s is a shallow clone or not a git repository: full history is required for monotonic pkgver" "$_root"
+		return 1
+	fi
+	if ! [[ "$_commit" =~ ^[0-9a-f]{40}$ ]] || ! [[ "$_short" =~ ^[0-9a-f]{8}$ ]]; then
+		error "could not read a 40-char git HEAD in %s (got '%s')" "$_root" "$_commit"
+		return 1
+	fi
+	if ! [[ "$_revcount" =~ ^[1-9][0-9]*$ ]]; then
+		error "invalid git commit count '%s' in %s" "$_revcount" "$_root"
+		return 1
+	fi
+	if [ -n "$(git -C "$_root" status --porcelain --untracked-files=no)" ] && [ "${OUROMAIL_ALLOW_DIRTY:-}" != 1 ]; then
+		error "%s has uncommitted changes: the package would be named after %s without being it" "$_root" "$_short"
+		return 1
+	fi
+	_srcenv
+	cargo fetch --locked --target host-tuple
+}
+
+build() {
+	_srcenv
+	cargo build --frozen --release -p mailcraft -p mailcraft-cli
+}
+
+package() {
+	depends+=(libgcc_s.so)
+	_srcenv
+	# The cargo names stay mailcraft and mailcraft-cli; only the installed names are OuroMail's.
+	install -Dm0755 "$CARGO_TARGET_DIR/release/mailcraft" "$pkgdir/usr/bin/ouromail"
+	install -Dm0755 "$CARGO_TARGET_DIR/release/mailcraft-cli" "$pkgdir/usr/bin/ouromail-cli"
+	install -Dm0755 packaging/arch-ouromail/ouromail-update.sh "$pkgdir/usr/bin/ouromail-update"
+	install -Dm0644 -t "$pkgdir/usr/share/applications/" packaging/linux/tech.moins.ouromail.desktop
+	install -Dm0644 -t "$pkgdir/usr/share/mime/packages/" packaging/linux/tech.moins.ouromail.mime.xml
+	local s dim
+	for s in "${_icons[@]}"; do
+		dim="${s}x${s}"
+		install -Dm0644 -t "$pkgdir/usr/share/icons/hicolor/$dim/apps/" "assets/app-icon/hicolor/$dim/apps/tech.moins.ouromail.png"
+	done
+	install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE-APACHE LICENSE-MIT
+}

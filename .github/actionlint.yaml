@@ -1,0 +1,7 @@
+# actionlint: the labels of the organisation's self-hosted runner that
+# .github/workflows/ouromail-package.yml runs on (docs/ouromail-builds.md). Only these two are
+# added to the labels actionlint knows; every other check stays as it is.
+self-hosted-runner:
+  labels:
+    - podman
+    - ouromail

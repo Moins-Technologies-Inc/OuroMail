@@ -181,11 +181,11 @@ codegen-units = 16
 debug = 0
 
 [patch.crates-io]
-# The local OuroMail build's winit (ouromail/main only; a clone on this computer, never pushed):
-# upstream's winit 0.30.13 (1477b126: an activation token that names the latest click, #144; Wayland
+# OuroMail's winit (ouromail/main only): the branch ouromail/wayland-hide of the public fork
+# github.com/Moins-Technologies-Inc/winit, pinned to the commit below. It is upstream's winit 0.30.13 (1477b126: an activation token that names the latest click, #144; Wayland
 # file drops and the clipboard on winit's one data device, rust-windowing/winit#4729, #523, #1217)
 # with rust-windowing/winit#4590 (a Wayland window hidden and shown again by unmapping it) and three
 # changes so that eframe and AccessKit work with it, for close to system tray on Wayland (#1805): a
 # new window starts visible, its visibility is unknown until it is set, and a hidden window reports
 # itself occluded.
-winit = { git = "file:///home/donielmoins/dev/mailcraft-workspace/forks/winit", rev = "96c0d373e76bf5cae90dcfdbb64aec629ffbd68f" }
+winit = { git = "https://github.com/Moins-Technologies-Inc/winit", rev = "96c0d373e76bf5cae90dcfdbb64aec629ffbd68f" }
