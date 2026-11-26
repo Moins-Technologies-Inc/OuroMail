@@ -166,6 +166,7 @@ fn choose(app: &mut MailApp, name: &str) {
     if app.session.signature_edit.as_ref().is_some_and(|e| e.dirty) && app.run("signature.save", json!({})).is_err() {
         return;
     }
+    app.signature_note = None;
     let _ = app.run("signature.open", json!({"name": name}));
 }
 
@@ -248,6 +249,13 @@ pub(crate) struct Rename {
     text: String,
 }
 
+#[cfg(test)]
+impl Rename {
+    pub(crate) fn for_test(from: &str, text: &str) -> Self {
+        Self { from: from.to_string(), text: text.to_string() }
+    }
+}
+
 /// Close the Rename field: rename the signature it was opened on to what was typed when `keep`
 /// (and that is a new name, not empty); let go of it otherwise.
 pub(crate) fn finish_rename(app: &mut MailApp, keep: bool) {
@@ -297,8 +305,8 @@ fn editing(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
             Some(why) => save.on_disabled_hover_text(why.as_str()),
             None => save,
         };
-        if save.clicked() {
-            let _ = app.run("signature.save", json!({}));
+        if save.clicked() && app.run("signature.save", json!({})).is_ok() {
+            app.signature_note = None;
         }
         if dirty {
             ui.label(egui::RichText::new(tl!("Changed: saved when you choose another signature or leave this page.")).color(t.text_dim));
@@ -331,16 +339,18 @@ fn html_source(app: &mut MailApp, ui: &mut Ui, t: &Tokens, mut source: String) {
         .layouter(&mut layouter)
         .show(ui);
     app.hit.add("signatureHtmlSource", 0, out.response.rect);
-    if crate::text_menu::field(out.response.response.clone()).changed()
-        && let Err(why) = app.execute("signature.html", json!({"html": source}))
-    {
-        refuse(app, why);
+    if crate::text_menu::field(out.response.response.clone()).changed() {
+        match app.execute("signature.html", json!({"html": source})) {
+            Ok(_) => app.signature_note = None,
+            Err(why) => refuse(app, why),
+        }
     }
     // The popup of a finding pointed at, and its fix, sent as typing is sent.
-    if let Some(fixed) = crate::compat::popup(app, ui, t, &out, &source)
-        && let Err(why) = app.execute("signature.html", json!({"html": fixed}))
-    {
-        refuse(app, why);
+    if let Some(fixed) = crate::compat::popup(app, ui, t, &out, &source) {
+        match app.execute("signature.html", json!({"html": fixed})) {
+            Ok(_) => app.signature_note = None,
+            Err(why) => refuse(app, why),
+        }
     }
     // How many findings there are, below the editor.
     let checked = crate::compat::checked(ui.ctx(), &source);

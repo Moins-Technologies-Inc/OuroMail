@@ -422,6 +422,8 @@ mod agent_gate_tests;
 #[cfg(test)]
 mod agent_ids_tests;
 #[cfg(test)]
+mod agent_signature_tests;
+#[cfg(test)]
 mod agent_tests;
 #[cfg(test)]
 mod catalog_tests;

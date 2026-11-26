@@ -1509,6 +1509,12 @@ msgstr "Une adresse sans domaine."
 #. interface
 #: crates/ui-egui/src/agent_gate.rs
 #, fuzzy
+msgid "An agent tried to change the signature you are editing; it was left as it was."
+msgstr "Un agent a tenté de modifier la signature que vous modifiez ; elle a été laissée telle quelle."
+
+#. interface
+#: crates/ui-egui/src/agent_gate.rs
+#, fuzzy
 msgid "An agent wants to {what}."
 msgstr "Un agent veut {what}."
 

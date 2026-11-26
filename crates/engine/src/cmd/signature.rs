@@ -14,7 +14,7 @@ use mailcraft_mime_model::signature_import::{PictureSource, picture_source};
 use mailcraft_model::RichBody;
 use mailcraft_model::rich::{Paragraph, RichText, Run, Style};
 use mailcraft_model::signature::{Layout, Signature, html_fits};
-use mailcraft_model::{AccountKind, Id, clean_name};
+use mailcraft_model::{AccountKind, Id, Mailbox, clean_name};
 use serde_json::{Value, json};
 
 use super::{bad, done, fail};
@@ -72,8 +72,18 @@ fn needs_edit(s: &Session) -> Option<&'static str> {
 }
 
 /// Whether the params name the open signature (or name none while one is open).
-fn names_open(s: &Session, v: &Value) -> bool {
+pub(crate) fn names_open(s: &Session, v: &Value) -> bool {
     s.signature_edit.as_ref().is_some_and(|e| p::str(v, "name").is_none_or(|n| n.trim().eq_ignore_ascii_case(&e.signature.name)))
+}
+
+/// Whether `signature.set` params name the open signature (including names whose cleaned form
+/// matches it, matching `set`'s `clean_name`).
+pub(crate) fn set_names_open(s: &Session, v: &Value) -> bool {
+    s.signature_edit.as_ref().is_some_and(|e| {
+        p::str(v, "name").is_none_or(|n| {
+            n.trim().eq_ignore_ascii_case(&e.signature.name) || clean_name(n).is_some_and(|c| c.eq_ignore_ascii_case(&e.signature.name))
+        })
+    })
 }
 
 /// The signature `name` names (any letter case), to change: the open one when it is that.
@@ -251,6 +261,100 @@ fn edited(e: &SignatureEdit) -> Result<Signature, CmdError> {
     let mut sig = e.signature.clone();
     sig.set_body(e.body.text().clone()).map_err(|err| fail(err.to_string()))?;
     Ok(sig)
+}
+
+/// Whether two signatures hold the same content aside from their name.
+fn same_signature_contents(a: &Signature, b: &Signature) -> bool {
+    a.body() == b.body() && a.pictures() == b.pictures() && a.layout == b.layout && a.details == b.details && a.html() == b.html()
+}
+
+/// Whether an agent's command left the signature editor holding something it didn't hold
+/// before (ouromail-signature-guard): the same opening of it with other text, formatting,
+/// dirty flag, format painter, pictures, layout, details or HTML; a dirty opening replaced
+/// without saving; or a signature given anew (opened, set, renamed) that is not the one kept,
+/// exactly, with nothing unsaved in it. Closing it, saving it, moving its caret and a rename
+/// that follows it leave nothing of the agent's in it.
+pub(crate) fn agent_changed_editor(before: Option<&SignatureEdit>, now: Option<&SignatureEdit>, mailbox: &Mailbox) -> bool {
+    let Some(now) = now else { return false };
+    if let Some(before) = before {
+        let same_editor =
+            before.body.text() == now.body.text() && before.body.painter() == now.body.painter() && before.body.pending() == now.body.pending();
+        if before.generation == now.generation {
+            if same_editor && before.dirty == now.dirty && before.signature == now.signature {
+                return false;
+            }
+            // `signature.save` keeps exactly what the editor already held and clears `dirty`.
+            let saved = same_editor
+                && !now.dirty
+                && edited(before).ok().as_ref() == Some(&now.signature)
+                && mailbox.signature(&now.signature.name) == Some(&now.signature);
+            return !saved;
+        }
+        // A rename follows the open signature: its name alone isn't what it holds.
+        if same_editor && before.dirty == now.dirty && same_signature_contents(&before.signature, &now.signature) {
+            return false;
+        }
+        // Replacing a dirty open signature without saving discards the owner's unsaved edits.
+        if before.dirty {
+            return true;
+        }
+    }
+    now.dirty
+        || now.body.painter().is_some()
+        || now.body.pending().is_some()
+        || now.body.text() != now.signature.body()
+        || mailbox.signature(&now.signature.name) != Some(&now.signature)
+}
+
+fn has_hidden(s: &str) -> bool {
+    s.chars().any(crate::agent::draws_nothing)
+}
+
+fn html_hides(h: &str) -> bool {
+    has_hidden(h) || has_hidden(&mailcraft_html::unescape(h))
+}
+
+fn body_hides(body: &RichText) -> bool {
+    body.paragraphs().iter().any(|p| {
+        p.runs.iter().any(|run| {
+            has_hidden(&run.text)
+                || run.style.link.as_deref().is_some_and(has_hidden)
+                || run.table.as_deref().is_some_and(|table| {
+                    table.rows().iter().any(|row| {
+                        row.iter().any(|cell| {
+                            cell.lines.iter().any(|line| line.iter().any(|c| has_hidden(&c.text) || c.style.link.as_deref().is_some_and(has_hidden)))
+                        })
+                    })
+                })
+        })
+    })
+}
+
+fn details_hides(d: &mailcraft_model::signature::Details) -> bool {
+    [&d.name, &d.title, &d.organisation, &d.phone, &d.mobile, &d.email, &d.website, &d.address].iter().any(|f| has_hidden(f))
+}
+
+/// Whether an agent's command gave a signature a character that draws nothing, however it was
+/// written (a character reference in its HTML, or any text, link, table, picture or details
+/// field): a signature in `after` holding one in a part that no signature in `before` already held.
+pub(crate) fn agent_hid_text(before: &Mailbox, after: &Mailbox) -> bool {
+    if before.signatures == after.signatures {
+        return false;
+    }
+    after.signatures.iter().any(|sig| {
+        if before.signatures.contains(sig) {
+            return false;
+        }
+        (has_hidden(&sig.name) && !before.signatures.iter().any(|b| b.name == sig.name))
+            || (has_hidden(&sig.plain()) && !before.signatures.iter().any(|b| b.plain() == sig.plain()))
+            || (body_hides(sig.body()) && !before.signatures.iter().any(|b| b.body() == sig.body()))
+            || (sig.html().is_some_and(html_hides) && !before.signatures.iter().any(|b| b.html() == sig.html()))
+            || sig.pictures().iter().any(|p| {
+                (has_hidden(&p.name) || has_hidden(&p.alt))
+                    && !before.signatures.iter().any(|b| b.pictures().iter().any(|bp| bp.name == p.name && bp.alt == p.alt))
+            })
+            || (sig.details.as_ref().is_some_and(details_hides) && !before.signatures.iter().any(|b| b.details == sig.details))
+    })
 }
 
 fn save(s: &mut Session, _: &Value) -> CmdResult {

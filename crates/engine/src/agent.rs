@@ -1597,6 +1597,11 @@ fn verdict(s: &Session, id: &str, params: &Value, allow: &[Class], yes: Option<C
     if access(id).is_none() {
         return Verdict::Refuse(format!("`{id}` isn't available to agents"));
     }
+    // The signature open in File › Signatures is the owner's, whatever was allowed; and an
+    // agent's signature text shows the owner everything it holds (ouromail-signature-guard).
+    if let Some(why) = open_signature_refusal(s, id, params).or_else(|| hidden_text_refusal(id, params)) {
+        return Verdict::Refuse(why);
+    }
     if let Some(key) = file_named(id, params) {
         return Verdict::Refuse(no_paths(id, key));
     }
@@ -3020,6 +3025,133 @@ fn value_text(v: &Value) -> String {
         Value::Array(a) => a.iter().filter_map(Value::as_str).collect::<Vec<_>>().join("; "),
         _ => String::new(),
     }
+}
+
+/// The commands that write in the editor in front ([`Session::doc_mut`](crate::Session::doc_mut)):
+/// while a signature is open in File › Signatures, that is the signature, whichever message is
+/// being written, so an agent is refused them then, whatever it was allowed
+/// ([`open_signature_refusal`]; ouromail-signature-guard).
+pub(crate) const EDITS_THE_EDITOR: &[&str] = &[
+    "compose.type",
+    "compose.replaceText",
+    "compose.delete",
+    "compose.undo",
+    "compose.redo",
+    "compose.link",
+    "edit.cut",
+    "edit.paste",
+    "edit.replace",
+    "edit.formatPainter",
+    "format.bold",
+    "format.italic",
+    "format.underline",
+    "format.size",
+    "format.color",
+    "format.highlight",
+    "format.font",
+    "format.bullets",
+    "format.numbering",
+    "format.clear",
+    "format.indent",
+    "format.outdent",
+    "insert.symbol",
+    "insert.dateTime",
+    "insert.picture",
+    // Puts the calendar's text in with `compose.type`.
+    "insert.calendar",
+];
+
+/// The signature commands that change the open signature in place when they name it (or name
+/// none while it is open): its pictures and their layout, its details, its HTML.
+pub(crate) const CHANGES_THE_OPEN_SIGNATURE: &[&str] =
+    &["signature.picture.add", "signature.picture.set", "signature.picture.remove", "signature.layout", "signature.details", "signature.html"];
+
+/// The commands that give a signature text an agent wrote, none of which may draw nothing
+/// ([`hidden_text_refusal`]).
+const WRITES_A_SIGNATURE: &[&str] = &[
+    "signature.set",
+    "signature.html",
+    "signature.details",
+    "signature.import",
+    "signature.rename",
+    "signature.picture.add",
+    "signature.picture.set",
+];
+
+/// Why an agent's call is refused while the owner has a signature open in File › Signatures:
+/// it would write in it, or change it in place (ouromail-signature-guard). An agent proposes a
+/// signature whole with `signature.set`, which asks the owner. [`Session::run`](crate::Session::run)
+/// undoes whatever an agent's command left in the open signature all the same, so this is the
+/// reason given before anything runs, not the only control.
+pub fn open_signature_refusal(s: &Session, id: &str, params: &Value) -> Option<String> {
+    let open = s.signature_edit.as_ref()?;
+    if EDITS_THE_EDITOR.contains(&id) {
+        return Some(format!(
+            "`{id}` would write in the signature the owner has open in File › Signatures (while one is open, the editing commands work on it, not on a message being written), and an agent doesn't edit it there; nothing was done. To propose a signature, send its whole text with `signature.set`, which asks the owner; to write in a message, wait until the owner has left File › Signatures (one that was open meanwhile may have become the owner's: start one with `mail.new`)"
+        ));
+    }
+    if CHANGES_THE_OPEN_SIGNATURE.contains(&id) && crate::cmd::signature::names_open(s, params) {
+        return Some(format!(
+            "`{id}` would change the signature the owner has open in File › Signatures, and an agent doesn't change it there; nothing was done. To propose its text, use `signature.set`, which asks the owner, or ask again once the owner has left File › Signatures"
+        ));
+    }
+    if id == "signature.set" && open.dirty && crate::cmd::signature::set_names_open(s, params) {
+        return Some(format!(
+            "`{id}` would replace the signature the owner has open in File › Signatures while it has unsaved changes; nothing was done. Ask the owner to save or discard their changes first, or propose another signature by a different name"
+        ));
+    }
+    None
+}
+
+/// Whether `c` draws nothing in a signature: a control character other than a line break or a
+/// tab, one of Unicode's format characters, or another of its default-ignorable code points (the
+/// lists of `mailcraft-names`).
+pub(crate) fn draws_nothing(c: char) -> bool {
+    (c.is_control() && !matches!(c, '\n' | '\r' | '\t')) || mailcraft_names::is_format(c) || mailcraft_names::is_ignorable(c)
+}
+
+/// How deep in the params a signature's text is looked for: anything deeper is refused.
+const MAX_TEXT_DEPTH: usize = 32;
+
+/// The first character that draws nothing in any string of `v` (its keys too), as `U+200B`.
+fn hidden_in(v: &Value, depth: usize) -> Option<String> {
+    let found = |text: &str| text.chars().find(|c| draws_nothing(*c)).map(|c| format!("U+{:04X}", u32::from(c)));
+    match v {
+        _ if depth > MAX_TEXT_DEPTH => Some(format!("text nested more than {MAX_TEXT_DEPTH} deep")),
+        Value::String(text) => found(text),
+        Value::Array(items) => items.iter().find_map(|x| hidden_in(x, depth.saturating_add(1))),
+        Value::Object(map) => map.iter().find_map(|(k, x)| found(k).or_else(|| hidden_in(x, depth.saturating_add(1)))),
+        _ => None,
+    }
+}
+
+/// Why an agent's signature text is refused: it holds a character that draws nothing, which the
+/// owner couldn't see when asked and every message signed with it would carry. The owner's own
+/// text is theirs and isn't looked at.
+pub(crate) fn hidden_text_refusal(id: &str, params: &Value) -> Option<String> {
+    if !WRITES_A_SIGNATURE.contains(&id) {
+        return None;
+    }
+    let what = hidden_in(params, 0)?;
+    Some(format!(
+        "`{id}` gives a signature text that holds a character which would draw nothing ({what}): the owner couldn't see it when asked, and every message signed with it would carry it, so an agent's signature text may hold none. Nothing was done; send the text without it"
+    ))
+}
+
+/// The refusal of an agent's command that changed the signature open in File › Signatures,
+/// once [`Session::run`](crate::Session::run) has undone it.
+pub(crate) fn signature_undone(id: &str) -> String {
+    format!(
+        "`{id}` would change the signature the owner has open in File › Signatures, and an agent doesn't edit it there; nothing was changed. To propose a signature, send its whole text with `signature.set`, which asks the owner"
+    )
+}
+
+/// The refusal of an agent's command that gave a signature a character which draws nothing,
+/// however it was written, once [`Session::run`](crate::Session::run) has undone it.
+pub(crate) fn hidden_undone(id: &str) -> String {
+    format!(
+        "`{id}` would give a signature a character which would draw nothing (written as a character reference, say), and an agent's signature text may hold none; nothing was changed. Send the text without it"
+    )
 }
 
 /// What a command did that its grant didn't cover: mail put into an Outbox (it would be sent),

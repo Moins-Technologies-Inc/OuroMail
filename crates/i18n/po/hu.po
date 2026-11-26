@@ -1514,6 +1514,12 @@ msgstr "Tartomány nélküli cím."
 #. interface
 #: crates/ui-egui/src/agent_gate.rs
 #, fuzzy
+msgid "An agent tried to change the signature you are editing; it was left as it was."
+msgstr "Egy ügynök megpróbálta módosítani a szerkesztett aláírásodat; változatlan maradt."
+
+#. interface
+#: crates/ui-egui/src/agent_gate.rs
+#, fuzzy
 msgid "An agent wants to {what}."
 msgstr "Egy ügynök ezt a műveletet kéri: {what}."
 
