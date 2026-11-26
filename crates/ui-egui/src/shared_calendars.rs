@@ -22,11 +22,27 @@
 //! his own is, at the mailbox's address; what makes the server send mail from the mailbox waits for
 //! the permission to send from shared mailboxes, which the same one question asks for.
 
-use mailcraft_model::Id;
+use mailcraft_model::{Account, Id};
 
 use crate::{MailApp, Tokens};
 
 pub(crate) use mailcraft_engine::sync_driver::SharedPermission as Permission;
+
+/// Identity stamp binding a cached shared-mailbox calendar access token to the mailbox opening,
+/// owning account sign-in identity, and normalized shared mailbox address it was issued for.
+#[derive(Clone)]
+pub(crate) struct SharedCalendarStamp {
+    pub(crate) opening: u64,
+    pub(crate) owner: Account,
+    pub(crate) shared_email: String,
+}
+
+/// A shared mailbox's cached calendar access token bound to its [`SharedCalendarStamp`].
+#[derive(Clone)]
+pub(crate) struct StampedSharedCalendarToken {
+    pub(crate) stamp: SharedCalendarStamp,
+    pub(crate) tokens: Tokens,
+}
 
 impl MailApp {
     /// Ask the owner, once, for what a calendar ticked in a shared mailbox found missing: the one
@@ -73,9 +89,65 @@ impl MailApp {
         }
     }
 
+    /// Build the identity stamp for `shared` from the live session, or `None` when `shared` is
+    /// not a live shared mailbox with an existing owner account.
+    pub(crate) fn shared_calendar_stamp(&self, shared: Id) -> Option<SharedCalendarStamp> {
+        let account = self.session.mailbox.account(shared).filter(|a| a.is_shared())?;
+        let owner = self.session.mailbox.owner_of(shared)?.clone();
+        Some(SharedCalendarStamp {
+            opening: self.session.openings(),
+            owner,
+            shared_email: mailcraft_host::job_sign_in::normalized_address(&account.email),
+        })
+    }
+
+    /// Whether `stamp` still matches `shared` in the live mailbox opening: same opening, `shared`
+    /// still exists as a shared mailbox owned by the same owner with the same normalized address,
+    /// and the owner still has the same sign-in credential identity.
+    pub(crate) fn shared_calendar_stamp_holds(&self, shared: Id, stamp: &SharedCalendarStamp) -> bool {
+        if stamp.opening != self.session.openings() {
+            return false;
+        }
+        let Some(account) = self.session.mailbox.account(shared).filter(|a| a.is_shared()) else {
+            return false;
+        };
+        if account.shared_of != Some(stamp.owner.id) || mailcraft_host::job_sign_in::normalized_address(&account.email) != stamp.shared_email {
+            return false;
+        }
+        self.session.mailbox.owner_of(shared).is_some_and(|owner| Self::same_sign_in_identity(&stamp.owner, owner))
+    }
+
+    /// Drop cached shared-calendar tokens for `account` (as the shared mailbox itself or as the
+    /// owning account of any shared mailboxes).
+    pub(crate) fn drop_shared_calendar_tokens_for(&mut self, account: Id) {
+        self.shared_calendar_tokens.retain(|shared, entry| *shared != account && entry.stamp.owner.id != account);
+    }
+
+    /// Drop every cached shared-calendar token whose stamp no longer matches the live session.
+    pub(crate) fn prune_stale_shared_calendar_tokens(&mut self) {
+        let stale: Vec<Id> = self
+            .shared_calendar_tokens
+            .iter()
+            .filter(|(shared, entry)| !self.shared_calendar_stamp_holds(**shared, &entry.stamp))
+            .map(|(shared, _)| *shared)
+            .collect();
+        for id in stale {
+            self.shared_calendar_tokens.remove(&id);
+        }
+    }
+
     /// Keep the tokens a calendar job or the page brought back: the access token is the shared
-    /// mailbox's calendars' own, the refresh token the owner's newest, for mail and Graph alike.
+    /// mailbox's calendars' own, stamped to the live opening, owner identity, and shared address;
+    /// the refresh token is the owner's newest, for mail and Graph alike.
     pub(crate) fn keep_shared_calendar_tokens(&mut self, shared: Id, owner: Id, tokens: Tokens) {
+        if self.data_removed {
+            self.shared_calendar_tokens.clear();
+            return;
+        }
+        let Some(stamp) = self.shared_calendar_stamp(shared).filter(|s| s.owner.id == owner) else {
+            self.shared_calendar_tokens.remove(&shared);
+            return;
+        };
         if !tokens.refresh.is_empty() {
             self.remember("refresh", owner, &tokens.refresh);
             if let Some(kept) = self.tokens.get_mut(&owner) {
@@ -83,20 +155,40 @@ impl MailApp {
             }
         }
         let now = mailcraft_time::now();
-        self.shared_calendar_tokens.insert(shared, Tokens { expires_at: tokens.expires_at.clamp(now, now.saturating_add(86_400)), ..tokens });
+        let clamped = Tokens { expires_at: tokens.expires_at.clamp(now, now.saturating_add(86_400)), ..tokens };
+        self.shared_calendar_tokens.insert(shared, StampedSharedCalendarToken { stamp, tokens: clamped });
     }
 
-    /// The access token to hand a job for `shared`'s calendars: the one in memory when it is
-    /// still good; else empty, and the host asks for one with the owner's refresh token.
-    pub(crate) fn shared_calendar_access(&self, shared: Id) -> String {
-        self.shared_calendar_tokens.get(&shared).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone()).unwrap_or_default()
+    /// The access token to hand a job for `shared`'s calendars: verified against its identity
+    /// stamp at every use; on mismatch or missing account/owner, evicted and refused (empty).
+    pub(crate) fn shared_calendar_access(&mut self, shared: Id) -> String {
+        if self.data_removed {
+            self.shared_calendar_tokens.clear();
+            return String::new();
+        }
+        let valid = self.shared_calendar_tokens.get(&shared).is_some_and(|entry| self.shared_calendar_stamp_holds(shared, &entry.stamp));
+        if !valid {
+            self.shared_calendar_tokens.remove(&shared);
+            return String::new();
+        }
+        self.shared_calendar_tokens
+            .get(&shared)
+            .filter(|entry| entry.tokens.fresh(mailcraft_time::now()))
+            .map(|entry| entry.tokens.access.clone())
+            .unwrap_or_default()
     }
 
-    /// A shared mailbox's calendar token as the page leaves it, for a host's tests (which sign
-    /// nobody in).
+    /// A shared mailbox's calendar token as the page leaves it, stamped to the current session,
+    /// for a host's tests (which sign nobody in).
     #[doc(hidden)]
     pub fn seed_shared_calendar_token(&mut self, shared: Id, tokens: Tokens) {
-        self.shared_calendar_tokens.insert(shared, tokens);
+        if self.data_removed {
+            return;
+        }
+        let Some(stamp) = self.shared_calendar_stamp(shared) else {
+            return;
+        };
+        self.shared_calendar_tokens.insert(shared, StampedSharedCalendarToken { stamp, tokens });
     }
 
     /// Make `account`'s list of calendars and their rights due at the next look, as a quarter of an

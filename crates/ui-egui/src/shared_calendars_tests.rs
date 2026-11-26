@@ -158,7 +158,7 @@ fn ticking_one_reads_the_list_and_what_is_ticked_with_the_owners_sign_in_and_not
     assert!(calendar_of(&app, shared, "Calendar").visible);
     assert!(app.session.mailbox.events.values().any(|e| e.title == "Stand-up" && e.origin.account == shared));
     // Its token is its own, in memory; the refresh token that came back is the owner's.
-    assert_eq!(app.shared_calendar_tokens.get(&shared).map(|t| t.access.as_str()), Some("cal-access"));
+    assert_eq!(app.shared_calendar_tokens.get(&shared).map(|t| t.tokens.access.as_str()), Some("cal-access"));
     assert_eq!(app.tokens.get(&owner).map(|t| (t.access.as_str(), t.refresh.as_str())), Some(("own-access", "ref-9")));
     assert!(!app.graph_tokens.contains_key(&shared), "not mixed with the mail's");
     assert_eq!(app.session.driver.calendar.shared_perm.get(&shared), Some(&Permission::Given));

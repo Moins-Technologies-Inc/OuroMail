@@ -104,6 +104,8 @@ mod settings_unread_tests;
 #[cfg(test)]
 mod shared_calendar_flow;
 #[cfg(test)]
+mod shared_calendar_token_wire_tests;
+#[cfg(test)]
 mod shared_send_flow;
 mod single_instance;
 #[cfg(any(target_os = "windows", target_os = "macos"))]

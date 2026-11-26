@@ -1,0 +1,1 @@
+- Cached shared-mailbox calendar tokens are now bound to the open mailbox, owner sign-in identity and shared mailbox address, cleared on mailbox switch, account edit/undo/redo, account or shared-mailbox removal, sign-in refusal and Remove All Data, and verified before in-flight calendar completions are applied (ouromail-shared-calendar-token-fix).

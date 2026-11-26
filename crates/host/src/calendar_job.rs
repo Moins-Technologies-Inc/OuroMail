@@ -20,7 +20,7 @@ use mailcraft_engine::sync_driver::{CalendarCame, CalendarPlan, CalendarTaken};
 use mailcraft_model::{Account, Id, OAuth};
 
 use crate::graph::{GraphRequest, GraphResult};
-use crate::job_sign_in::{ForeignSignIn, foreign_sign_in};
+use crate::job_sign_in::{ForeignSignIn, foreign_sign_in, normalized_address, same_sign_in_identity};
 
 /// The sign-in a calendar job goes with, as the front end found it.
 pub struct CalendarAuth {
@@ -72,13 +72,41 @@ pub fn calendar_request(session: &Session, plan: &CalendarPlan, auth: CalendarAu
 /// The job under way.
 struct Running {
     account: Id,
+    /// Whether the job was launched for a shared mailbox.
+    is_shared: bool,
+    /// Normalized shared mailbox address at launch (empty when `!is_shared`).
+    shared_email: String,
     /// The account whose sign-in the job went with (a shared mailbox's owner), as it was: the
-    /// tokens that come back must be its own ([`foreign_sign_in`]).
+    /// tokens that come back must be its own ([`foreign_sign_in`]), and the live account/owner
+    /// must still have the same sign-in identity when the answer arrives.
     signer: Account,
     carried: bool,
     started: f64,
     opening: u64,
     rx: Receiver<GraphResult>,
+}
+
+impl Running {
+    /// Whether `session` still has the same mailbox opening, target account kind/address, and
+    /// signer credential identity as when this job started.
+    fn matches_session(&self, session: &Session) -> bool {
+        if self.opening != session.openings() {
+            return false;
+        }
+        let Some(live_account) = session.mailbox.account(self.account) else {
+            return false;
+        };
+        if live_account.is_shared() != self.is_shared {
+            return false;
+        }
+        if self.is_shared {
+            live_account.shared_of == Some(self.signer.id)
+                && normalized_address(&live_account.email) == self.shared_email
+                && session.mailbox.owner_of(self.account).is_some_and(|owner| same_sign_in_identity(&self.signer, owner))
+        } else {
+            same_sign_in_identity(&self.signer, live_account)
+        }
+    }
 }
 
 /// The calendar's job in flight, at most one.
@@ -96,6 +124,9 @@ impl std::fmt::Debug for CalendarJobs {
 /// What a calendar job's answer is, before the engine takes it in.
 pub struct CalendarAnswer {
     pub account: Id,
+    /// Whether the job was launched for a shared mailbox (captured at launch, never inferred
+    /// post-hoc from a possibly removed account).
+    pub is_shared: bool,
     /// The job carried changes up.
     pub carried: bool,
     /// When it started (milliseconds).
@@ -131,6 +162,18 @@ impl CalendarJobs {
         self.running.as_ref().map(|r| r.account)
     }
 
+    /// Whether the job in flight belongs to `account` or uses `account`'s sign-in (for a shared
+    /// mailbox owned by `account`).
+    pub fn involves(&self, account: Id) -> bool {
+        self.running.as_ref().is_some_and(|r| r.account == account || r.signer.id == account)
+    }
+
+    /// Whether the job in flight (if any) still matches `session`'s current mailbox opening,
+    /// target account kind/address, and signer credential identity.
+    pub fn matches_session(&self, session: &Session) -> bool {
+        self.running.as_ref().is_none_or(|r| r.matches_session(session))
+    }
+
     /// Let go of the job in flight (another mailbox took the place of the open one).
     pub fn forget(&mut self) {
         self.running = None;
@@ -151,22 +194,32 @@ impl CalendarJobs {
             return false;
         }
         let Some(request) = calendar_request(session, plan, auth) else { return false };
+        let is_shared = request.account.is_shared();
+        let shared_email = if is_shared { normalized_address(&request.account.email) } else { String::new() };
         // (Checked again here when the answer comes: the run checks it before anything goes up.)
         let Some(signer) = request.signer.clone() else { return false };
         let Some(rx) = launch(request) else { return false };
         session.calendar_started(plan, now);
-        self.running =
-            Some(Running { account: plan.account, signer, carried: plan.changes.is_some(), started: now, opening: session.openings(), rx });
+        self.running = Some(Running {
+            account: plan.account,
+            is_shared,
+            shared_email,
+            signer,
+            carried: plan.changes.is_some(),
+            started: now,
+            opening: session.openings(),
+            rx,
+        });
         true
     }
 
     /// The answer of the job in flight, when it has come.
     pub fn poll(&mut self, session: &Session) -> CalendarPolled {
         let Some(running) = self.running.as_ref() else { return CalendarPolled::Nothing };
-        // For a mailbox that has been closed since: its accounts are other accounts, whatever
-        // their ids and addresses, and the answer is nobody's (AU3-V8).
-        if running.opening != session.openings() {
-            log::info!("calendar: the answer is for a mailbox that is no longer open; let go of");
+        // For a mailbox that has been closed since, or whose target account or signer identity
+        // changed or was removed while the job was in flight: the answer is nobody's (AU3-V8).
+        if !running.matches_session(session) {
+            log::info!("calendar: the job's mailbox or sign-in identity changed while it ran; let go of");
             self.running = None;
             return CalendarPolled::Stale;
         }
@@ -190,6 +243,7 @@ impl CalendarJobs {
         };
         CalendarPolled::Answer(Box::new(CalendarAnswer {
             account: running.account,
+            is_shared: running.is_shared,
             carried: running.carried,
             started: running.started,
             result,

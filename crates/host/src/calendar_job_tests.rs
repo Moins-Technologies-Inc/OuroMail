@@ -191,3 +191,59 @@ fn a_shared_mailboxs_calendar_is_judged_by_the_sign_in_it_is_opened_through() {
     let theirs = Tokens { refresh: "r".into(), email: "mallory@example.net".into(), ..Default::default() };
     assert!(answered(&mut s, &mut jobs, &plan, theirs).foreign.is_some());
 }
+#[test]
+fn a_job_whose_owner_identity_changed_in_flight_is_let_go_of_as_stale() {
+    // Email + tenant edit while shared calendar job is in flight (late answer has empty email).
+    {
+        let (mut s, owner) = session();
+        let shared = s.run("account.addSharedMailbox", &json!({"address": "support@example.org"})).unwrap()["id"].as_u64().unwrap();
+        let plan = CalendarPlan { account: shared, ..plan(&mut s, owner) };
+        let mut jobs = CalendarJobs::default();
+        let (tx, rx) = channel::<GraphResult>();
+        assert!(jobs.start(&mut s, &plan, auth(), 1_000.0, |_| Some(rx)));
+        s.run("account.edit", &json!({"id": owner, "email": "bob@example.net", "tenant": "tenant-b"})).unwrap();
+        let _ = tx.send(GraphResult {
+            account: shared,
+            tokens: Some(Tokens { access: "stale".into(), refresh: "r".into(), email: String::new(), ..Default::default() }),
+            ..Default::default()
+        });
+        assert!(matches!(jobs.poll(&s), CalendarPolled::Stale));
+        assert!(!jobs.busy());
+    }
+
+    // Tenant-only edit while shared calendar job is in flight.
+    {
+        let (mut s, owner) = session();
+        let shared = s.run("account.addSharedMailbox", &json!({"address": "support@example.org"})).unwrap()["id"].as_u64().unwrap();
+        let plan = CalendarPlan { account: shared, ..plan(&mut s, owner) };
+        let mut jobs = CalendarJobs::default();
+        let (tx, rx) = channel::<GraphResult>();
+        assert!(jobs.start(&mut s, &plan, auth(), 1_000.0, |_| Some(rx)));
+        s.run("account.edit", &json!({"id": owner, "tenant": "tenant-b"})).unwrap();
+        let _ = tx.send(GraphResult {
+            account: shared,
+            tokens: Some(Tokens { access: "stale".into(), refresh: "r".into(), email: "ada@example.org".into(), ..Default::default() }),
+            ..Default::default()
+        });
+        assert!(matches!(jobs.poll(&s), CalendarPolled::Stale));
+        assert!(!jobs.busy());
+    }
+}
+
+#[test]
+fn a_job_whose_shared_mailbox_was_removed_in_flight_is_let_go_of_as_stale() {
+    let (mut s, owner) = session();
+    let shared = s.run("account.addSharedMailbox", &json!({"address": "support@example.org"})).unwrap()["id"].as_u64().unwrap();
+    let plan = CalendarPlan { account: shared, ..plan(&mut s, owner) };
+    let mut jobs = CalendarJobs::default();
+    let (tx, rx) = channel::<GraphResult>();
+    assert!(jobs.start(&mut s, &plan, auth(), 1_000.0, |_| Some(rx)));
+    s.run("account.removeSharedMailbox", &json!({"id": shared})).unwrap();
+    let _ = tx.send(GraphResult {
+        account: shared,
+        tokens: Some(Tokens { access: "stale".into(), refresh: "r".into(), email: "ada@example.org".into(), ..Default::default() }),
+        ..Default::default()
+    });
+    assert!(matches!(jobs.poll(&s), CalendarPolled::Stale));
+    assert!(!jobs.busy());
+}
