@@ -13,7 +13,9 @@
 //! Tables: columns get the widths their contents and the source's hints call for, squeezed to the
 //! room there is. A data table is never squeezed below its longest words (the pane scrolls
 //! sideways instead) and never stacked. A layout table whose columns would be too narrow for
-//! what is in them is stacked: its cells one under the other, each as wide as the room. A cell
+//! what their own cells hold is stacked: its cells one under the other, each as wide as the table
+//! asks to be within the room, where the table would stand. A cell spanning columns (a long
+//! paragraph the whole width of the table) wraps in them and is no reason to stack the others. A cell
 //! sits where the source puts it in its row (`valign`, `vertical-align`); where it says nothing, a
 //! row of a layout table whose cells each hold one line has them on its middle.
 //!
@@ -1403,13 +1405,13 @@ fn boxes_line(cx: &mut Cx<'_>, run: &[Block], x: f32, y: f32, width: f32, paper:
     y
 }
 
-/// The width `table_block` lays `table` out at in `room` points: its columns', or all the room
-/// when it is stacked.
+/// The width `table_block` lays `table` out at in `room` points: its columns', or its own
+/// ([`stacked_width`]) when it is stacked.
 fn drawn_width(cx: &mut Cx<'_>, table: &Table, room: f32, depth: usize) -> f32 {
     if depth >= MAX_NESTING {
-        return room;
+        return stacked_width(table, room);
     }
-    column_widths(cx, table, &grid(table), room, depth).map_or(room, |(_, total)| total)
+    column_widths(cx, table, &grid(table), room, depth).map_or_else(|| stacked_width(table, room), |(_, total)| total)
 }
 
 // ---- how wide things want to be ----
@@ -1686,6 +1688,9 @@ fn gaps(table: &Table) -> Vec2 {
 struct Columns {
     min: Vec<f32>,
     max: Vec<f32>,
+    /// The width the column's own cells want, those spanning columns left out: what decides
+    /// whether a layout table's columns fit side by side, however the spanning cells are shared out.
+    own: Vec<f32>,
     fixed: Vec<bool>,
     /// The share of the table's width a column asks for, in percent; 0 for none.
     share: Vec<f32>,
@@ -1693,7 +1698,7 @@ struct Columns {
 
 fn columns(cx: &mut Cx<'_>, table: &Table, grid: &Grid<'_>, depth: usize) -> Columns {
     let n = grid.columns;
-    let mut out = Columns { min: vec![0.0; n], max: vec![0.0; n], fixed: vec![false; n], share: vec![0.0; n] };
+    let mut out = Columns { min: vec![0.0; n], max: vec![0.0; n], own: vec![0.0; n], fixed: vec![false; n], share: vec![0.0; n] };
     let gap = gaps(table).x;
     let ruled = ruled(table);
     let mut spanning = Vec::new();
@@ -1730,9 +1735,10 @@ fn columns(cx: &mut Cx<'_>, table: &Table, grid: &Grid<'_>, depth: usize) -> Col
             }
             None => {}
         }
-        if let (Some(lo), Some(hi)) = (out.min.get_mut(placed.col), out.max.get_mut(placed.col)) {
+        if let (Some(lo), Some(hi), Some(own)) = (out.min.get_mut(placed.col), out.max.get_mut(placed.col), out.own.get_mut(placed.col)) {
             *lo = lo.max(min);
             *hi = hi.max(max);
+            *own = own.max(max).min(WIDE);
         }
     }
     // The columns a cell spans hold it together: what they lack is shared out among them, among
@@ -1785,11 +1791,7 @@ fn table_extent(cx: &mut Cx<'_>, table: &Table, depth: usize) -> Extent {
 fn column_widths(cx: &mut Cx<'_>, table: &Table, grid: &Grid<'_>, room: f32, depth: usize) -> Option<(Vec<f32>, f32)> {
     let n = grid.columns;
     let between = gaps(table).x * n.saturating_sub(1) as f32;
-    let asked = match table.width {
-        Some(Length::Px(w)) => Some(f32::from(w).min(room)),
-        Some(Length::Percent(p)) => Some(room * f32::from(p.min(100)) / 100.0),
-        None => None,
-    };
+    let asked = asked_width(table, room);
     // One column that is told its width needs no measuring.
     if let (1, Some(width)) = (n, asked) {
         let width = width.max(MIN_CELL.min(room));
@@ -1801,7 +1803,9 @@ fn column_widths(cx: &mut Cx<'_>, table: &Table, grid: &Grid<'_>, room: f32, dep
     let mut total = asked.unwrap_or(most.min(room));
     if table.layout {
         // Stacked when its columns can't be had without breaking words, or would be narrow and
-        // squeezed; never when everything fits at the width it wants (a row of icons). A column
+        // squeezed; never when everything fits at the width it wants (a row of icons). What the
+        // columns want is what their own cells want: a cell spanning them (a long paragraph the
+        // whole width of the table) wraps in them, though what it can't break still counts. A column
         // that only makes room (a gutter, the corner of a frame drawn with cells' lines: no cell
         // of its own holds anything) takes the room it asks for, and is not one of those squeezed.
         let mut holds = vec![false; n];
@@ -1813,7 +1817,8 @@ fn column_widths(cx: &mut Cx<'_>, table: &Table, grid: &Grid<'_>, room: f32, dep
         let room_kept: f32 = columns.max.iter().zip(&holds).filter(|(_, holds)| !**holds).map(|(max, _)| *max).sum();
         let filled = holds.iter().filter(|h| **h).count();
         let each = if filled == 0 { room / n as f32 } else { (room - room_kept).max(0.0) / filled as f32 };
-        if n > 1 && (least > room + 0.5 || (most > room + 0.5 && each < MIN_LAYOUT_COLUMN)) {
+        let wanted: f32 = columns.own.iter().sum::<f32>() + between;
+        if n > 1 && (least > room + 0.5 || (wanted > room + 0.5 && each < MIN_LAYOUT_COLUMN)) {
             return None;
         }
         total = total.min(room).max(least.min(room));
@@ -1856,6 +1861,20 @@ fn column_widths(cx: &mut Cx<'_>, table: &Table, grid: &Grid<'_>, room: f32, dep
     };
     let total = widths.iter().sum::<f32>() + between;
     Some((widths, total))
+}
+
+/// The width a table asks for in `room` points, never more than the room; `None` when it asks for none.
+fn asked_width(table: &Table, room: f32) -> Option<f32> {
+    match table.width {
+        Some(Length::Px(w)) => Some(f32::from(w).min(room)),
+        Some(Length::Percent(p)) => Some(room * f32::from(p.min(100)) / 100.0),
+        None => None,
+    }
+}
+
+/// The width a stacked table takes in `room` points: what it asks for, else all the room.
+fn stacked_width(table: &Table, room: f32) -> f32 {
+    asked_width(table, room).map_or(room, |asked| asked.max(MIN_CELL.min(room)))
 }
 
 /// How a line round a box is drawn here: its thickness, its colour on the paper it lies on, its style.
@@ -2019,7 +2038,7 @@ fn table_block(cx: &mut Cx<'_>, table: &Table, align: Align, x: f32, y: f32, roo
     let widths = if depth >= MAX_NESTING { None } else { column_widths(cx, table, &grid, room, depth) };
     let Some((widths, total)) = widths else {
         cx.stats.stacked += 1;
-        return stacked(cx, table, x, y, room, paper, depth);
+        return stacked(cx, table, align, x, y, room, paper, depth);
     };
     let x = x + match align {
         Align::Left => 0.0,
@@ -2184,8 +2203,16 @@ fn one_line(items: &[Item]) -> bool {
     seen && low < high + 0.5
 }
 
-/// A layout table with no room for its columns: its cells one under the other, each as wide as the room.
-fn stacked(cx: &mut Cx<'_>, table: &Table, x: f32, y: f32, room: f32, paper: Paper, depth: usize) -> f32 {
+/// A layout table with no room for its columns: its cells one under the other, each as wide as the
+/// table ([`stacked_width`]), which stands where `align` puts it in `room`.
+fn stacked(cx: &mut Cx<'_>, table: &Table, align: Align, x: f32, y: f32, room: f32, paper: Paper, depth: usize) -> f32 {
+    let width = stacked_width(table, room);
+    let x = x + match align {
+        Align::Left => 0.0,
+        Align::Center => ((room - width) / 2.0).max(0.0),
+        Align::Right => (room - width).max(0.0),
+    };
+    let room = width;
     let around = table.background.map_or(paper, |bg| Paper::of(bg, &cx.t));
     let table_slot = table.background.map(|_| cx.slot());
     let table_behind = cx.behind_slot(table.bg_picture.as_deref());
