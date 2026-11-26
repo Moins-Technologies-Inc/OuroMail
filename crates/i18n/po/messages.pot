@@ -1255,6 +1255,11 @@ msgstr ""
 
 #. interface
 #: crates/ui-egui/src/agent_gate.rs
+msgid "An agent tried to change the signature you are editing; it was left as it was."
+msgstr ""
+
+#. interface
+#: crates/ui-egui/src/agent_gate.rs
 msgid "An agent wants to {what}."
 msgstr ""
 

@@ -1,0 +1,1 @@
+- An agent connected to the window can no longer change a signature you have open in File › Signatures: its edits there are refused or undone, the page says so in one line, and leaving the page or quitting keeps only what you wrote. An agent can still propose a whole signature, which asks you and shows its text; a text that holds characters which draw nothing is refused.

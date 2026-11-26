@@ -44,7 +44,7 @@ pub(crate) fn after(app: &mut MailApp, id: &str, r: &Result<Value, String>) {
         "sync.offline" if v.get("offline").and_then(Value::as_bool) == Some(true) => went_offline(app),
         "sync.offline" => went_online(app),
         // File › Account: the page that says what this copy is, and its updates.
-        "file.account" => {
+        "file.account" if !(app.session.agent.is_some() && (app.session.signature_edit.is_some() || app.signature_rename.is_some())) => {
             app.ui.backstage = true;
             app.ui.backstage_page = "about".to_string();
         }

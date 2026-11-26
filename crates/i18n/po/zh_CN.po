@@ -1511,6 +1511,12 @@ msgstr "没有域名的地址。"
 #. interface
 #: crates/ui-egui/src/agent_gate.rs
 #, fuzzy
+msgid "An agent tried to change the signature you are editing; it was left as it was."
+msgstr "有智能体尝试更改您正在编辑的签名；签名保持不变。"
+
+#. interface
+#: crates/ui-egui/src/agent_gate.rs
+#, fuzzy
 msgid "An agent wants to {what}."
 msgstr "智能体请求执行：{what}。"
 

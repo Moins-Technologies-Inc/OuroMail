@@ -1220,6 +1220,9 @@ pub struct Session {
     /// set by the window while an agent's command runs: a command that takes one away is undone,
     /// as the owner wasn't asked about it (#494). Never saved.
     pub owner_changing: Vec<Id>,
+    /// How many times an agent's command was undone for what it did to the signature open in
+    /// File › Signatures ([`Session::signature_guarded`]). Never saved.
+    signature_guarded: u64,
     /// The messages and folders the owner was shown in an agent's question, set by the window
     /// while the command the owner said yes to runs: a folder emptied on that yes takes none but
     /// these, and what came into it meanwhile stays ([`crate::agent::bind`]). Never saved.
@@ -1424,6 +1427,7 @@ impl Session {
             jmap_read: Default::default(),
             agent: None,
             owner_changing: Vec::new(),
+            signature_guarded: 0,
             only_shown: None,
             saving: Saving::Asked,
             graph_switch_backup: None,
@@ -1684,6 +1688,12 @@ impl Session {
     pub(crate) fn next_signature_editor(&mut self) -> u64 {
         self.signature_editors = self.signature_editors.wrapping_add(1);
         self.signature_editors
+    }
+
+    /// Changes each time an agent's command is undone for what it did to the signature open in
+    /// File › Signatures (ouromail-signature-guard): the window tells the owner.
+    pub fn signature_guarded(&self) -> u64 {
+        self.signature_guarded
     }
 
     /// Changes each time an undo or redo puts another version of the mailbox in place: what a
@@ -4263,6 +4273,16 @@ impl Session {
         // gone for good, an appointment the owner is changing taken away) is undone, whatever
         // path it took there.
         let result = match (result, &self.agent) {
+            // The signature open in File › Signatures is the owner's: an agent's command leaves
+            // nothing of its own in it, whatever the gate let through (ouromail-signature-guard).
+            (Ok(_), Some(_)) if crate::cmd::signature::agent_changed_editor(signature_edit.as_ref(), self.signature_edit.as_ref(), &self.mailbox) => {
+                self.signature_guarded = self.signature_guarded.wrapping_add(1);
+                Err(CmdError::Failed(crate::agent::signature_undone(id)))
+            }
+            // Nor does an agent give a signature a character that draws nothing, however written.
+            (Ok(_), Some(_)) if crate::cmd::signature::agent_hid_text(&before.mailbox, &self.mailbox) => {
+                Err(CmdError::Failed(crate::agent::hidden_undone(id)))
+            }
             (Ok(_), Some(_)) if let Some(taken) = self.owner_changing.iter().filter_map(|e| taken_from(&before.mailbox, &self.mailbox, *e)).max() => {
                 Err(taken.refusal(id))
             }

@@ -278,6 +278,8 @@ mod shared_permission;
 #[cfg(test)]
 mod shared_permission_tests;
 #[cfg(test)]
+mod signature_agent_guard_tests;
+#[cfg(test)]
 mod signature_close_tests;
 mod signature_import;
 #[cfg(test)]
@@ -2624,7 +2626,45 @@ impl MailApp {
             return Err(e);
         }
         let before: Vec<u64> = self.session.all_composing().map(|c| c.id).collect();
+        let sig_was_open = self.session.signature_edit.is_some();
         let r = self.session.run(id, &params);
+        // Clear any stale signature notice when the owner edits, saves, switches or closes a signature (CORR-01).
+        if r.is_ok()
+            && self.session.agent.is_none()
+            && self.signature_note.is_some()
+            && (matches!(
+                id,
+                "signature.open"
+                    | "signature.save"
+                    | "signature.close"
+                    | "signature.html"
+                    | "signature.details"
+                    | "signature.layout"
+                    | "signature.picture.set"
+                    | "signature.picture.remove"
+                    | "signature.rename"
+            ) || (sig_was_open
+                && (id.starts_with("format.")
+                    || matches!(
+                        id,
+                        "compose.type"
+                            | "compose.replaceText"
+                            | "compose.delete"
+                            | "compose.undo"
+                            | "compose.redo"
+                            | "compose.link"
+                            | "edit.cut"
+                            | "edit.paste"
+                            | "edit.replace"
+                            | "edit.formatPainter"
+                            | "insert.symbol"
+                            | "insert.dateTime"
+                            | "insert.picture"
+                            | "insert.calendar"
+                    ))))
+        {
+            self.signature_note = None;
+        }
         self.drop_secrets_if_replaced();
         self.last_error = r.as_ref().err().cloned();
         let r = r.map_err(|e| e.to_string());
@@ -2745,7 +2785,9 @@ impl MailApp {
         self.compose_bcc.retain(|id| open.contains(id));
         if r.is_ok() && composing != windows::compose_window::pane_compose(self).is_some() {
             self.ui.tab = if composing { "Home".into() } else { "Message".into() };
-            self.ui.backstage = false;
+            if !(self.session.agent.is_some() && (self.session.signature_edit.is_some() || self.signature_rename.is_some())) {
+                self.ui.backstage = false;
+            }
         }
         r
     }

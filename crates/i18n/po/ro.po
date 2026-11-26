@@ -1511,6 +1511,12 @@ msgstr "O adresă fără domeniu."
 #. interface
 #: crates/ui-egui/src/agent_gate.rs
 #, fuzzy
+msgid "An agent tried to change the signature you are editing; it was left as it was."
+msgstr "Un agent a încercat să modifice semnătura pe care o editați; a rămas neschimbată."
+
+#. interface
+#: crates/ui-egui/src/agent_gate.rs
+#, fuzzy
 msgid "An agent wants to {what}."
 msgstr "Un agent vrea să {what}."
 

@@ -1513,6 +1513,12 @@ msgstr "Adres bez domeny."
 #. interface
 #: crates/ui-egui/src/agent_gate.rs
 #, fuzzy
+msgid "An agent tried to change the signature you are editing; it was left as it was."
+msgstr "Agent próbował zmienić edytowany przez Ciebie podpis; pozostał bez zmian."
+
+#. interface
+#: crates/ui-egui/src/agent_gate.rs
+#, fuzzy
 msgid "An agent wants to {what}."
 msgstr "Agent chce wykonać operację: {what}."
 

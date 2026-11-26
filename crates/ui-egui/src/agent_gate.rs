@@ -127,11 +127,17 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
         params["attendees"] = json!(people);
     }
     let params = as_the_window_has_it(app, id, params);
+    if let Some(why) = leaves_open_signature(app, id, &params) {
+        signature_kept(app);
+        return err(why);
+    }
     if let Some(why) = overwrites(app, id, &params) {
         return err(why);
     }
     // A send warning is the owner's to answer, every time (#509).
     let (params, warnings) = crate::send_warnings::for_agent(app, id, params);
+    // An agent's edit of the signature open in File › Signatures is refused, and the owner told.
+    let signature = agent::open_signature_refusal(&app.session, id, &params).is_some();
     match agent::check(&app.session, id, &params, allow) {
         Verdict::Run if warnings.is_empty() => run(app, id, params, allow, None),
         Verdict::Run => {
@@ -143,7 +149,12 @@ fn gate(app: &mut MailApp, req: &ControlRequest, id: &str, mut params: Value, al
             }
             queue(app, req, id, params, (Class::Send, what), allow, warnings)
         }
-        Verdict::Refuse(why) => err(why),
+        Verdict::Refuse(why) => {
+            if signature {
+                signature_kept(app);
+            }
+            err(why)
+        }
         Verdict::Ask(class, what) => queue(app, req, id, params, (class, what), allow, warnings),
     }
 }
@@ -238,6 +249,38 @@ fn as_the_window_has_it(app: &MailApp, id: &str, mut params: Value) -> Value {
     params
 }
 
+/// Whether `id` with `params` would leave File › Signatures while the owner has a signature open
+/// or is renaming one (ouromail-signature-guard): leaving runs `leave_signature` on the next frame
+/// as the owner, which would save unfinished edits, finish a rename and close the editor.
+fn leaves_open_signature(app: &MailApp, id: &str, params: &Value) -> Option<String> {
+    if app.session.signature_edit.is_none() && app.signature_rename.is_none() {
+        return None;
+    }
+    let leaves = match id {
+        "ui.backstage" => {
+            let next_open = params.get("value").and_then(Value::as_bool).unwrap_or(!app.ui.backstage);
+            let next_page = params.get("page").and_then(Value::as_str).unwrap_or(if next_open && !app.ui.backstage {
+                "info"
+            } else {
+                app.ui.backstage_page.as_str()
+            });
+            !next_open || next_page != "signatures"
+        }
+        "ui.tab" => {
+            let tab = params.get("tab").and_then(Value::as_str);
+            tab != Some("File") || !(app.ui.backstage && app.ui.backstage_page == "signatures")
+        }
+        "ui.focusSearch" => true,
+        "file.account" => true,
+        _ => false,
+    };
+    leaves.then(|| {
+        format!(
+            "`{id}` would leave File › Signatures while the owner has a signature open there; nothing was done. Wait until the owner has left File › Signatures"
+        )
+    })
+}
+
 /// Why an agent's command can't run at all while the owner is changing what it would overwrite
 /// or take away (#494): what the owner typed in an appointment's window (`ui.openWindow` of
 /// another time proposed, `ui.eventWindow` closing the recurrence they are filling in), or the
@@ -308,10 +351,14 @@ fn run(app: &mut MailApp, id: &str, params: Value, allow: &[Class], only: Option
     app.session.owner_changing = changing;
     app.session.only_shown = only;
     let owner = app.windows.dialog_for;
+    let guarded = app.session.signature_guarded();
     let r = app.execute(id, params);
     app.session.agent = None;
     app.session.owner_changing = Vec::new();
     app.session.only_shown = None;
+    if app.session.signature_guarded() != guarded {
+        signature_kept(app);
+    }
     if let Some(form) = owners {
         // The form was only set aside. A dialog the command opened is not shown, and the form
         // is still the one its window had open.
@@ -330,6 +377,22 @@ fn run(app: &mut MailApp, id: &str, params: Value, allow: &[Class], only: Option
         Ok(v) => ok(v),
         Err(e) => err(e),
     }
+}
+
+#[cfg(test)]
+pub(crate) fn run_for_test(app: &mut MailApp, id: &str, params: Value, allow: &[Class]) -> Outcome {
+    run(app, id, params, allow, None)
+}
+
+/// Tell the owner that an agent's change to the signature open in File › Signatures was refused
+/// or undone (ouromail-signature-guard): one line, below the editor while the page is up (the
+/// status bar is hidden behind File), and in the status bar.
+fn signature_kept(app: &mut MailApp) {
+    let said = tl!("An agent tried to change the signature you are editing; it was left as it was.");
+    if app.ui.backstage && (app.session.signature_edit.is_some() || app.signature_rename.is_some()) {
+        app.signature_note = Some(crate::signatures::Note { text: said.to_string(), error: true });
+    }
+    app.status(said);
 }
 
 /// The messages an agent's Delete or Move names (`ids` or `id`, which it must: [`agent::NEEDS_IDS`])
@@ -408,6 +471,7 @@ pub fn answer_with(app: &mut MailApp, said: Answer) {
         };
         let lost = params.get("unsaved").filter(|u| !u.is_null());
         let other = lost.is_some() && lost != a.params.get("unsaved");
+        let signature = agent::open_signature_refusal(&app.session, &a.id, &params).is_some();
         let verdict = agent::answered(&app.session, &a.id, &params, &a.allow, a.class);
         // What else it needs now, which the yes covers only when the question named it (#473).
         let also = agent::also(&app.session, &a.id, &params, a.class);
@@ -433,6 +497,10 @@ pub fn answer_with(app: &mut MailApp, said: Answer) {
         match verdict {
             _ if other => err(format!("what `{}` would close without saving has changed since the owner was asked; nothing was done", a.id)),
             _ if more => err(format!("`{}` would now do more than the owner was asked about; nothing was done", a.id)),
+            _ if let Some(why) = leaves_open_signature(app, &a.id, &params) => {
+                signature_kept(app);
+                err(why)
+            }
             _ if let Some(why) = overwrites(app, &a.id, &params) => err(why),
             _ if let Err(why) = &reach => {
                 app.status(tl!("Nothing was done: what the agent asked about changed after you were asked."));
@@ -456,7 +524,12 @@ pub fn answer_with(app: &mut MailApp, said: Answer) {
                 };
                 run(app, &a.id, params, &allow, only)
             }
-            Verdict::Refuse(why) => err(why),
+            Verdict::Refuse(why) => {
+                if signature {
+                    signature_kept(app);
+                }
+                err(why)
+            }
             Verdict::Ask(..) => err(format!("`{}` would now do more than the owner was asked about; nothing was done", a.id)),
         }
     } else {
