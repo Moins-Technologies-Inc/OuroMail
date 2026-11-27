@@ -658,3 +658,54 @@ fn a_favorite_is_moved_with_its_menu() {
     harness.run_steps(3);
     assert_eq!(last_two(own(&harness)), [alpha, beta]);
 }
+
+/// The right-click menu of an account's heading offers Add Shared Mailbox… where a shared mailbox
+/// can be opened under it (a work or school Microsoft account), and opens the dialog for that
+/// account; a shared mailbox's own heading offers Remove Shared Mailbox… instead, which asks
+/// first, as File › Info's Remove does. A local account's heading offers neither.
+#[test]
+fn the_account_heading_menu_offers_add_shared_mailbox_only_where_it_can_open_one() {
+    let mut harness = window();
+    let local = harness.state().session.mailbox.accounts[0].id;
+    let app = harness.state_mut();
+    let work = app.execute("account.add", serde_json::json!({"email": "noor@example.org", "kind": "microsoft"})).unwrap()["id"].as_u64().unwrap();
+    let personal = app
+        .execute("account.add", serde_json::json!({"email": "ada@personal.example", "kind": "microsoft", "auth": "oauth2", "directory": "personal"}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let shared = app.execute("account.addSharedMailbox", serde_json::json!({"account": work, "address": "support@example.org"})).unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    for id in [local, work, personal, shared] {
+        harness.state_mut().execute("ui.toggleFolder", serde_json::json!({"id": id})).unwrap();
+    }
+    harness.run_steps(3);
+    let offers = |h: &mut egui_kittest::Harness<'static, MailApp>, id: Id| {
+        let at = h.state().hit.rect("folderHeading", id).unwrap().center();
+        right_click(h, at);
+        let found = (h.query_by_label("Add Shared Mailbox…").is_some(), h.query_by_label("Remove Shared Mailbox…").is_some());
+        h.key_press(egui::Key::Escape);
+        h.run_steps(2);
+        found
+    };
+    assert_eq!(offers(&mut harness, local), (false, false), "a local account");
+    assert_eq!(offers(&mut harness, personal), (false, false), "a personal Microsoft account has no shared mailboxes");
+    assert_eq!(offers(&mut harness, work), (true, false), "a work account");
+    assert_eq!(offers(&mut harness, shared), (false, true), "a shared mailbox");
+    // Add Shared Mailbox… opens the dialog for the account whose heading it is.
+    let at = harness.state().hit.rect("folderHeading", work).unwrap().center();
+    right_click(&mut harness, at);
+    harness.get_by_label("Add Shared Mailbox…").click();
+    harness.run_steps(3);
+    assert!(matches!(&harness.state().dialog, Some(crate::dialogs::Dialog::SharedMailbox { account, .. }) if *account == work));
+    harness.state_mut().dialog = None;
+    harness.run_steps(2);
+    // Remove Shared Mailbox… asks first, and removes nothing until the yes.
+    let at = harness.state().hit.rect("folderHeading", shared).unwrap().center();
+    right_click(&mut harness, at);
+    harness.get_by_label("Remove Shared Mailbox…").click();
+    harness.run_steps(3);
+    assert!(matches!(&harness.state().dialog, Some(crate::dialogs::Dialog::Confirm { .. })), "asked first");
+    assert!(harness.state().session.mailbox.account(shared).is_some());
+}

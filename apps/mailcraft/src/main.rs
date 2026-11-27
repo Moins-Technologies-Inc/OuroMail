@@ -46,6 +46,7 @@ mod desktop_theme;
 mod diagnostics;
 #[cfg(test)]
 mod diagnostics_problem_tests;
+mod directory_job;
 #[cfg(test)]
 mod ews_mail_flow;
 #[cfg(test)]
@@ -763,6 +764,13 @@ fn sign_in_with(request: SignInRequest, open_page: &dyn Fn(&str) -> bool) -> Res
         }
     };
     let unopened = |said: String| if no_browser.load(Ordering::Relaxed) { NO_BROWSER.to_string() } else { said };
+    // "Allow" in Add Shared Mailbox's search, after the window asked the owner: the page comes up
+    // for searching the organisation's directory alone, beside what Graph was asked for before; a
+    // no is said as the Favorites' is, and nothing is asked a second time.
+    if request.graph && request.directory {
+        let asked = mailcraft_net::oauth::sign_in_for_directory(&request.oauth, &request.email, &open, &request.cancel);
+        return asked.map_err(|refusal| unopened(favorites_refusal(refusal)));
+    }
     // "Show Outlook's Favorites": the owner asked, so the page comes up, for what Microsoft Graph
     // was asked for before and the two permissions that reading the Favorites takes. A no that
     // is not the owner's to change is said in the words the window knows it by; nothing is
@@ -1141,6 +1149,7 @@ fn services(
     let fetch_ctx = ctx.clone();
     let (ews_ctx, ews_fetch_ctx, ews_setup_ctx, ews_resolve_ctx) = (ctx.clone(), ctx.clone(), ctx.clone(), ctx.clone());
     let search_ctx = ctx.clone();
+    let directory_ctx = ctx.clone();
     let tasks_ctx = ctx.clone();
     let rules_ctx = ctx.clone();
     let categories_ctx = ctx.clone();
@@ -1255,6 +1264,10 @@ fn services(
         // A Microsoft mailbox searched on its server, a page at a time, on the owner's click (R6.2).
         graph_search: Some(Box::new(move |job: mailcraft_ui_egui::server_search::GraphSearchJob| {
             background(&search_ctx, "server search", move || mailcraft_net::graph::search_messages(&job.access, &job.request))
+        })),
+        // Add Shared Mailbox's search of the organisation's directory, as the owner types.
+        graph_directory: Some(Box::new(move |job: mailcraft_ui_egui::directory_search::DirectoryJob| {
+            background(&directory_ctx, "directory search", move || directory_job::run(job))
         })),
         // The tasks of a Microsoft account, kept in step with Microsoft To Do (#248).
         graph_tasks: Some(Box::new({

@@ -55,7 +55,7 @@ pub enum Link {
 impl MailApp {
     /// A Graph token of this session for `account` that is still good.
     fn search_token(&self, account: Id) -> Option<String> {
-        self.graph_tokens.get(&account).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone())
+        self.graph_token(account).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone())
     }
 
     /// What the link below the local results is now.

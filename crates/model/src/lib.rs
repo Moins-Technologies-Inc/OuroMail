@@ -21,6 +21,7 @@ pub mod device_limits;
 #[cfg(test)]
 mod device_limits_tests;
 pub mod digital_signature;
+pub mod directory;
 pub mod draft_signature;
 mod ews_server;
 pub mod gmail;
@@ -87,8 +88,8 @@ pub use mailbox::{
     FOLDERS_NOT_DELETED_YET, FOLDERS_STAY_YET, Folder, FolderCounts, FolderKind, FollowUp, FollowUpsSettled, GREY_CATEGORY, GraphSwitch, IMPORTED,
     INTO_OUTBOX, ImapStatus, MAX_CATEGORIES, MAX_FOLDER_DEPTH, MAX_FOLDERS, MAX_FOLLOW_UP_AHEAD, MAX_RULES, MAX_SHARED, MAX_SNOOZE_AHEAD,
     MAX_SNOOZE_REFUSALS, MOVED_INTO_OUTBOX, MailIdentity, Mailbox, OAuth, OAuthProvider, ONLY_SERVER_FOLDERS, PALETTE, Pending, PendingFollowUp,
-    Queued, Security, Server, ServerFavorites, ServerFolder, Settled, Snooze, categories_read_only_text, category_key, lead_rank, leads,
-    sort_as_listed,
+    Queued, Security, Server, ServerFavorites, ServerFolder, Settled, SharedBefore, Snooze, categories_read_only_text, category_key, lead_rank,
+    leads, sort_as_listed,
 };
 pub use mailcraft_time as time;
 pub use message::{
@@ -238,6 +239,8 @@ mod search_tests;
 mod send_warnings_tests;
 #[cfg(test)]
 mod sender_warnings_tests;
+#[cfg(test)]
+mod shared_before_tests;
 #[cfg(test)]
 mod shown_tests;
 #[cfg(test)]

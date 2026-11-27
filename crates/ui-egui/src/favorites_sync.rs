@@ -84,7 +84,7 @@ impl MailApp {
         if favorites && self.session.driver.favorites.is_uncovered(account) {
             return String::new();
         }
-        self.graph_tokens.get(&account).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone()).unwrap_or_default()
+        self.graph_token(account).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone()).unwrap_or_default()
     }
 
     /// A Graph token for `account` came from somewhere that didn't ask for the Favorites'

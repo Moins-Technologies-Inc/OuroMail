@@ -96,6 +96,8 @@ pub struct AutoRepliesSync {
     /// The job under way: for which account, the change it makes, the [`fingerprint`] of the
     /// refresh token it was given, and the answer to come.
     rx: Option<(Id, Option<AutoReplies>, u64, Receiver<AutoRepliesResult>)>,
+    /// The sign-in the job went with ([`MailApp::job_signer`]).
+    signer: Option<Account>,
     /// The mailbox opening all of this is about ([`mailcraft_engine::Session::openings`]).
     opening: u64,
 }
@@ -208,6 +210,10 @@ impl MailApp {
 
     /// Hand the host a job for `account`: read its replies, after changing them as `change` says.
     fn start_auto_replies_job(&mut self, account: Id, change: Option<AutoReplies>, now: f64) -> bool {
+        // (Nothing goes once the data is removed.)
+        if self.data_removed {
+            return false;
+        }
         let Some(owner) = self.session.mailbox.account(account).cloned() else { return false };
         let Some(oauth) = owner.oauth.clone() else { return false };
         let refresh = self.auto_replies_refresh(&owner);
@@ -223,6 +229,7 @@ impl MailApp {
         let job = AutoRepliesJob { account: owner, oauth: self.effective_oauth(oauth), refresh, change: change.clone(), cancel: Default::default() };
         let Some(host) = self.services.graph_auto_replies.as_ref() else { return false };
         self.auto_replies.rx = Some((account, change, given, host(job)));
+        self.auto_replies.signer = self.job_signer(account);
         self.session.auto_replies_started(account, now);
         if changing {
             self.session.sync_status = tl!("Changing your automatic replies…").to_string();
@@ -301,6 +308,13 @@ impl MailApp {
         self.auto_replies.rx = None;
         if change.is_some() {
             self.session.sync_status.clear();
+        }
+        // Gone with a sign-in that is no longer the account's own (it went, or its sign-in
+        // changed): nothing of the answer is kept, and nothing of it is said.
+        let signer = self.auto_replies.signer.take();
+        if !self.graph_job_holds(account, signer.as_ref()) {
+            log::info!("automatic replies: the account went or its sign-in changed while the job ran; let go of");
+            return;
         }
         if let Some(tokens) = &result.tokens
             && !tokens.refresh.is_empty()

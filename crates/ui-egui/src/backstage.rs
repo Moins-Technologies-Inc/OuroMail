@@ -331,7 +331,7 @@ fn info(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
         }
         // A mailbox of the organisation that the owner was given Full Access to (#70).
         // (Not for a personal Microsoft account, which has none.)
-        if crate::shared_mailboxes::can_open_shared(a) {
+        if a.can_open_shared() {
             ui.horizontal(|ui| {
                 ui.add_space(12.0);
                 let link = ui.link(tl!("Add Shared Mailbox…")).on_hover_text(tl!(
@@ -341,6 +341,39 @@ fn info(app: &mut MailApp, ui: &mut Ui, t: &Tokens) {
                     let _ = app.run("ui.dialog", json!({"name": "sharedMailbox", "account": a.id}));
                 }
             });
+            // Where searching its organisation's directory for one stands in this session.
+            if let Some(line) = app.directory_line(a.id) {
+                ui.horizontal(|ui| {
+                    ui.add_space(36.0);
+                    let said = ui.label(egui::RichText::new(line.said).font(regular(11.5)).color(t.text_dim));
+                    if app.held_perm(a.id).is_none() {
+                        said.on_hover_text(tl!(
+                            "If you allowed it before, or your administrator did for everybody, the first search in Add Shared Mailbox goes without a question."
+                        ));
+                    }
+                });
+                // (Its links on a line of their own, which wraps: nothing is pushed off a narrow page.)
+                if line.help || line.copy || line.again {
+                    ui.horizontal_wrapped(|ui| {
+                    ui.add_space(36.0);
+                    if line.help && ui.link(tl!("What to do next")).clicked() {
+                        let _ = app.run("ui.approvalHelp", json!({"account": a.id}));
+                    }
+                    if line.copy && ui.link(tl!("Copy a message for my administrator")).clicked() {
+                        let _ = app.run("ui.copyAdminMessage", json!({"account": a.id}));
+                    }
+                    if line.again {
+                        let link = ui.link(tl!("Ask again")).on_hover_text(tl!(
+                            "Ask for permission to search your organisation's directory in Add Shared Mailbox: Microsoft's page opens in your browser. Without it, you type the shared mailbox's address."
+                        ));
+                        app.hit.add("directoryAskAgain", a.id, link.rect);
+                        if link.clicked() {
+                            app.directory_ask_again(a.id);
+                        }
+                    }
+                });
+                }
+            }
             ui.add_space(4.0);
         }
     }

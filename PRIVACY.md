@@ -127,8 +127,17 @@ computer, for you, and for nothing else:
   phone: the rule's name, the words it looks for and what it does go to your own Microsoft account and
   nowhere else;
 - reading the list of folders you keep under Favorites in Outlook, if you ask for it;
+- searching your organisation's directory for a shared mailbox to open (`User.ReadBasic.All`), if you
+  allow it the first time you search in Add Shared Mailbox: what you type into its search field (once
+  you have typed at least two characters and paused, at most 64 of them) goes to Microsoft Graph; a
+  search starts only while that dialog is open (one already on its way when you close it finishes, and
+  its answer is dropped); the names and addresses of the people and shared mailboxes that match (at most
+  15; the directory doesn't tell the two apart) come back, are shown in the dialog only, and go when it
+  closes. Nothing of it is logged or kept, and an agent can't search for you;
 - reading and changing the mail of shared mailboxes you have been given access to (`Mail.ReadWrite.Shared`);
-  nothing of a shared mailbox is read until you open it;
+  nothing of a shared mailbox is read until you open it. When you remove one, its address and name stay
+  in your mailbox file (at most 20 for each account, never sent anywhere), so that Add Shared Mailbox can
+  offer it again under Opened before; Forget there removes one, Forget all every one;
 - sending from a shared mailbox (`Mail.Send.Shared`; an answer to a meeting or an invitation from a shared
   mailbox's calendar is sending from it);
 - reading and changing the calendars of shared mailboxes you have been given access to, and the calendars
@@ -138,7 +147,7 @@ computer, for you, and for nothing else:
   this computer only, and what you may see of it is up to its owner and your organisation;
 - keeping you signed in (a refresh token, stored as described above).
 
-All of these but the Favorites are on the page of a sign-in, so that you are asked once. When
+All of these but the Favorites and the directory search are on the page of a sign-in, so that you are asked once. When
 Microsoft's page won't have them all, it is asked again: a personal account is never asked for the
 shared mailboxes and calendars (it has none); a page that won't have some of the permissions is asked
 again without the shared mailboxes' and calendars', then without the to-dos' and the settings' too; an
@@ -147,6 +156,15 @@ asked again for a bit less, only (for an administrator's approval) once more for
 so that signing in for mail never waits on the rest.
 The Favorites' two (`MailboxConfigItem.Read`, `Mail.ReadBasic`) are asked for by themselves, only
 when you ask for them, because an organisation may need an administrator to approve them.
+The directory search's (`User.ReadBasic.All`) is asked for by itself too, for the same reason: the
+first time you search in Add Shared Mailbox and your sign-in doesn't cover it, MailCraft asks you first
+(Allow, Not now), and only Allow opens Microsoft's page, for that permission alone. When it was given
+already (by you in an earlier session, or by your administrator for everybody through the link
+MailCraft gives administrators), your first search goes without a question. Only you answer the
+question: your Not now, or your closing it, lasts for this session (nothing more is sent, and you type
+the shared mailbox's address as before); when an agent or a script closes it, or Microsoft's page is
+closed before it answers, nothing is recorded and you are asked again. File › Info says where it stands
+in this session, with Ask again.
 
 An account that signed in before MailCraft asked for all of this on one page is asked by the
 program, when it first needs one it doesn't have, in one question ("Keep in Step with Outlook", or

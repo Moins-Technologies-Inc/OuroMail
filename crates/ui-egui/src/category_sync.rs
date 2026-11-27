@@ -79,6 +79,8 @@ pub struct CategorySync {
     /// account's address then: its answer is for that mailbox and that address alone.
     opening: u64,
     address: String,
+    /// The sign-in the job under way went with ([`MailApp::job_signer`]).
+    signer: Option<Account>,
     /// The accounts a job has looked at in this session, and when.
     checked: HashMap<Id, f64>,
     /// The address each account had when it was last looked at: another address is another
@@ -224,7 +226,7 @@ impl MailApp {
 
     fn start_categories_job(&mut self, account: Id, now: f64) -> bool {
         // (Offline, nothing goes, from here either.)
-        if self.offline() || self.services.graph_categories.is_none() {
+        if self.offline() || self.services.graph_categories.is_none() || self.data_removed {
             return false;
         }
         let Some(owner) = self.session.mailbox.account(account).cloned() else { return false };
@@ -243,6 +245,7 @@ impl MailApp {
         self.category_sync.rx = Some((account, now, given, graph(job)));
         self.category_sync.opening = self.session.openings();
         self.category_sync.address = job_address;
+        self.category_sync.signer = self.job_signer(account);
         self.category_sync.checked.insert(account, now);
         true
     }
@@ -270,12 +273,18 @@ impl MailApp {
         // For a mailbox that has been closed since: its ids may name other things in this one. Nor
         // for an account whose list isn't kept in step with Outlook any more (no longer a
         // Microsoft account): Outlook's list is no list of its.
+        // Nor for a sign-in that is no longer the account's own (it changed): nothing of it is
+        // kept, and nothing of it is said.
         let address = self.session.mailbox.account(account).map(|a| a.email.trim().to_lowercase());
+        let signer = self.category_sync.signer.take();
         if self.category_sync.opening != self.session.openings()
             || address.as_deref() != Some(self.category_sync.address.as_str())
             || !category_accounts(&self.session.mailbox).contains(&account)
+            || !self.graph_job_holds(account, signer.as_ref())
         {
-            log::info!("categories: the answer is for a mailbox that is no longer open, another address or no Microsoft account; let go of");
+            log::info!(
+                "categories: the answer is for a mailbox that is no longer open, another address or sign-in, or no Microsoft account; let go of"
+            );
             // (The account of the mailbox open now is still to be looked at.)
             self.category_sync.checked.remove(&account);
             return;

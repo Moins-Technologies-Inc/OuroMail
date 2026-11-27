@@ -108,7 +108,10 @@ impl MailApp {
             let _ = send.send(read(&*store, asks, migrate));
         });
         match job {
-            Ok(_) => self.secret_read = Some((self.session.openings(), receive)),
+            Ok(_) => {
+                self.secrets_let_go.clear();
+                self.secret_read = Some((self.session.openings(), receive));
+            }
             Err(e) => log::warn!("couldn't start reading the credential store: {e}"),
         }
     }
@@ -140,6 +143,13 @@ impl MailApp {
             Err(mpsc::TryRecvError::Disconnected) => None,
         };
         self.secret_read = None;
+        // What was let go of while it ran is not taken back from it (a sign-in changed, an account
+        // went); and once the data is removed, nothing is.
+        let let_go = std::mem::take(&mut self.secrets_let_go);
+        if self.data_removed {
+            self.sync_after_secrets.clear();
+            return;
+        }
         // A mailbox took the place of the one it was started for: its accounts are not these.
         if opening == self.session.openings()
             && let Some(brought) = brought
@@ -149,7 +159,7 @@ impl MailApp {
             // settings give that name any more.)
             let dav_now: std::collections::HashSet<String> = self.session.mailbox.accounts.iter().flat_map(Self::dav_secret_keys).collect();
             for (key, secret) in brought.answers {
-                let stale = key.starts_with(mailcraft_host::secrets::DAV_PASSWORD) && !dav_now.contains(&key);
+                let stale = (key.starts_with(mailcraft_host::secrets::DAV_PASSWORD) && !dav_now.contains(&key)) || let_go.contains(&key);
                 if let Some(secret) = secret.filter(|_| !stale) {
                     // Noted, as one written here is, so that Remove all data finds it whichever
                     // mailbox is open then (AU3-18).

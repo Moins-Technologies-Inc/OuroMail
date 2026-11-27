@@ -93,7 +93,7 @@ impl MailApp {
     /// not a live shared mailbox with an existing owner account.
     pub(crate) fn shared_calendar_stamp(&self, shared: Id) -> Option<SharedCalendarStamp> {
         let account = self.session.mailbox.account(shared).filter(|a| a.is_shared())?;
-        let owner = self.session.mailbox.owner_of(shared)?.clone();
+        let owner = self.sign_in_snapshot(self.session.mailbox.owner_of(shared)?);
         Some(SharedCalendarStamp {
             opening: self.session.openings(),
             owner,
@@ -114,7 +114,7 @@ impl MailApp {
         if account.shared_of != Some(stamp.owner.id) || mailcraft_host::job_sign_in::normalized_address(&account.email) != stamp.shared_email {
             return false;
         }
-        self.session.mailbox.owner_of(shared).is_some_and(|owner| Self::same_sign_in_identity(&stamp.owner, owner))
+        self.session.mailbox.owner_of(shared).is_some_and(|owner| self.same_sign_in_identity(&stamp.owner, owner))
     }
 
     /// Drop cached shared-calendar tokens for `account` (as the shared mailbox itself or as the

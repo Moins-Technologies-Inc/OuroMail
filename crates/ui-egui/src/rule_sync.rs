@@ -80,6 +80,8 @@ pub struct RuleSync {
     /// alone, and is let go of when another has been opened since. And what it was to send.
     opening: u64,
     sending: RulesUpload,
+    /// The sign-in the job under way went with ([`MailApp::job_signer`]).
+    signer: Option<Account>,
 }
 
 impl RuleSync {
@@ -125,6 +127,10 @@ impl MailApp {
     }
 
     fn start_rules_job(&mut self, account: Id, writes: bool, now: f64) -> bool {
+        // (Nothing goes once the data is removed.)
+        if self.data_removed {
+            return false;
+        }
         let Some(owner) = self.session.mailbox.account(account).cloned() else { return false };
         let Some(oauth) = owner.oauth.clone() else { return false };
         let kept = self.tokens.get(&account).map(|t| t.refresh.clone()).filter(|r| !r.is_empty());
@@ -158,6 +164,7 @@ impl MailApp {
         rules_remote::mark_sent(&mut self.session, &sent);
         self.rules.sending = sent;
         self.rules.rx = Some((account, now, given, rx));
+        self.rules.signer = self.job_signer(account);
         self.rules.opening = self.session.openings();
         self.session.rules_started(account, now);
         true
@@ -182,6 +189,13 @@ impl MailApp {
         // For a mailbox that has been closed since: its ids may name other things in this one.
         if self.rules.opening != self.session.openings() {
             log::info!("rules: the answer is for a mailbox that is no longer open; let go of");
+            return;
+        }
+        // Nor for a sign-in that is no longer the account's own (it went, or its sign-in changed):
+        // nothing of it is kept, and nothing of it is said.
+        let signer = self.rules.signer.take();
+        if !self.graph_job_holds(account, signer.as_ref()) {
+            log::info!("rules: the account went or its sign-in changed while the job ran; let go of");
             return;
         }
         // What was to be made and went nowhere goes with the next job: all of it when nothing went

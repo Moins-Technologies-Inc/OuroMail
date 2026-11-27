@@ -108,6 +108,7 @@ mod dialog_scrim_tests;
 #[cfg(test)]
 mod dialog_size_tests;
 pub mod dialogs;
+pub mod directory_search;
 #[cfg(test)]
 mod draft_continue_tests;
 #[cfg(test)]
@@ -163,6 +164,7 @@ mod inbox_pass;
 pub mod jmap_mail;
 #[cfg(test)]
 mod job_replacement_tests;
+mod job_signers;
 mod jobs;
 mod keep_offline;
 #[cfg(test)]
@@ -270,11 +272,13 @@ pub mod server_sync;
 #[cfg(test)]
 mod server_sync_tests;
 pub mod settings_notice;
+mod shared_before;
 #[cfg(test)]
 mod shared_calendar_token_tests;
 mod shared_calendars;
 #[cfg(test)]
 mod shared_calendars_tests;
+mod shared_mail_tokens;
 mod shared_mailboxes;
 mod shared_permission;
 #[cfg(test)]
@@ -414,6 +418,11 @@ pub struct Services {
     /// Desktop: search a Microsoft mailbox on its server, one page, on a background thread
     /// (R6.2: More results on the server, only on the owner's click).
     pub graph_search: Option<Box<dyn Fn(server_search::GraphSearchJob) -> Receiver<mailcraft_model::sync::GraphSearchResult>>>,
+    /// Desktop: search the organisation's directory of a work or school Microsoft account for a
+    /// shared mailbox to open, on a background thread, with a token for the directory of its own
+    /// (Add Shared Mailbox, [`directory_search`]: only as the owner types, while the dialog is open).
+    /// Absent in the browser: the dialog then has only the address field.
+    pub graph_directory: Option<Box<dyn Fn(directory_search::DirectoryJob) -> Receiver<directory_search::DirectoryResult>>>,
     /// Keep a Microsoft account's tasks in step with Microsoft To Do (#248; [`task_sync`]).
     pub graph_tasks: Option<Box<dyn Fn(task_sync::TasksJob) -> Receiver<task_sync::TasksResult>>>,
     /// Keep a Microsoft account's rules on its server (#566; [`rule_sync`]).
@@ -868,6 +877,11 @@ pub struct SignInRequest {
     /// mailbox to be read). A no that is not the owner's to change is answered as for the Favorites
     /// ([`favorites_sync::NEEDS_APPROVAL`]…).
     pub sync: bool,
+    /// With `graph`: the page for searching the organisation's directory alone (`User.ReadBasic.All`,
+    /// `mailcraft_net::oauth::sign_in_for_directory`), because the owner said Allow in Add Shared
+    /// Mailbox after the window asked him. A no that is not the owner's to change is answered as for
+    /// the Favorites ([`favorites_sync::NEEDS_APPROVAL`]…).
+    pub directory: bool,
 }
 
 pub use mailcraft_host::calendar::{CalendarCheckRequest, CalendarCheckResult, CalendarCheckStep};
@@ -890,6 +904,8 @@ struct SigningIn {
     shared: Option<Id>,
     /// The one page for an older sign-in ([`server_sync`]).
     sync: bool,
+    /// The page for searching the organisation's directory ([`directory_search`]).
+    directory: bool,
     /// The owner signs in on a page in the browser (no kept token to renew it with).
     browser: bool,
     /// The mailbox opening it was started under ([`Session::openings`]): an answer that comes
@@ -1273,6 +1289,18 @@ pub const UI_COMMANDS: &[(&str, &str, &str, &str)] = &[
         "More Results on the Server",
         "Search",
         "{} — asks the server of each Microsoft mailbox the search in view involves for its next 50 results (the owner's click only: never by itself)",
+    ),
+    (
+        "ui.searchDirectory",
+        "Search the Organisation's Directory",
+        "Add Shared Mailbox",
+        r#"{"text"?: string, "answer"?: {"outcome": "found"|"nothingAsked"|"consentNeeded"|"notAllowed"|"approval"|"signInRefused"|"busy"|"unreachable", "entries"?: [{"name": string, "address": string}], "more"?: bool}} — the open Add Shared Mailbox dialog's search: `text` is typed into it and searched at the next frame, as the owner's typing is after its pause (the text goes to Microsoft Graph with a token for User.ReadBasic.All); with `answer` nothing is asked of anybody and it is shown as what Microsoft brought (for scripts, and for looking at the dialog in each of its states). Never for agents. Answers {"account", "pending": bool} or {"account", "shown": number}"#,
+    ),
+    (
+        "ui.allowDirectory",
+        "Allow Searching the Organisation's Directory",
+        "Add Shared Mailbox",
+        r#"{"account": number (a work or school Microsoft account), "confirmed": true} — the owner's Allow: Microsoft's page opens for searching the organisation's directory (User.ReadBasic.All) alone, asked for by itself and never with a sign-in. Never for agents. Answers {"pending": "signIn", "account": number}"#,
     ),
     (
         "ui.skipSync",
@@ -1734,6 +1762,9 @@ pub struct MailApp {
     secret_cache: std::collections::HashMap<String, String>,
     /// The background read of the store under way, with the opening it was started for.
     secret_read: Option<(u64, std::sync::mpsc::Receiver<secret_read::SecretRead>)>,
+    /// The names let go of in the credential store while that read was under way: what it brings
+    /// for them is the store as it was before, and is not taken ([`secret_read`]).
+    secrets_let_go: std::collections::HashSet<String>,
     /// The opening, and whether remembering was on, when the store was last read by itself.
     secrets_asked: Option<(u64, bool)>,
     /// Send/Receive the owner asked for, held until the store has answered.
@@ -1766,6 +1797,14 @@ pub struct MailApp {
     /// nobody asked, whether the calendar and contacts were asked for, and the answer to come.
     /// And the mailbox opening it was started under ([`Session::openings`]).
     graph_rx: Option<(Id, bool, bool, u64, Receiver<GraphResult>)>,
+    /// The account whose sign-in the job in `graph_rx` went with (a shared mailbox's owner), as
+    /// it was then: its answer is the account's only while that is still its sign-in
+    /// ([`shared_mail_tokens`]).
+    graph_signer: Option<mailcraft_model::Account>,
+    /// What each shared mailbox's entry in `graph_tokens` was had for: the opening, its owner's
+    /// sign-in and its address. An entry is used only while its stamp holds
+    /// ([`MailApp::graph_token`]).
+    shared_mail_stamps: std::collections::HashMap<Id, shared_calendars::SharedCalendarStamp>,
     /// The pieces of a Graph mail run as they come (R3.2), and what they had to say.
     graph_pieces: Option<Receiver<mailcraft_model::sync::GraphMailResult>>,
     graph_problems: Vec<String>,
@@ -1788,6 +1827,10 @@ pub struct MailApp {
     shared_next: Option<Id>,
     /// The next sign-in is the one page for an older sign-in ([`server_sync`]).
     sync_next: bool,
+    /// The next sign-in is the page for searching the organisation's directory ([`directory_search`]).
+    directory_next: bool,
+    /// Add Shared Mailbox's search of the directory ([`directory_search`]).
+    pub(crate) directory_search: directory_search::DirectorySearching,
     /// The accounts whose one question about that is on screen or on Microsoft's page, and those
     /// whose question went away unanswered in this session (not put again by itself).
     pub(crate) sync_asking: std::collections::HashSet<Id>,
@@ -1818,6 +1861,9 @@ pub struct MailApp {
     /// Shared mailboxes just added in Add Shared Mailbox whose Inbox hasn't been read yet: kept
     /// only once it has been, and removed again when it can't be (#70).
     shared_checking: std::collections::HashSet<Id>,
+    /// Those of [`MailApp::shared_checking`] added again from Add Shared Mailbox's Opened before:
+    /// one that isn't kept is remembered there again (Q4).
+    shared_from_before: std::collections::HashSet<Id>,
     /// A shared mailbox being added whose first run waits for the Send/Receive under way, which
     /// was called off for it: it starts as soon as that one has stopped.
     shared_check_next: Option<Id>,
@@ -2089,6 +2135,7 @@ impl MailApp {
             secrets_opening: 0,
             secret_cache: Default::default(),
             secret_read: None,
+            secrets_let_go: Default::default(),
             secrets_asked: None,
             sync_after_secrets: Vec::new(),
             unconfirmed: false,
@@ -2101,6 +2148,8 @@ impl MailApp {
             tokens: Default::default(),
             graph_tokens: Default::default(),
             graph_rx: None,
+            graph_signer: None,
+            shared_mail_stamps: Default::default(),
             graph_pieces: None,
             graph_problems: Vec::new(),
             graph_pieces_taken: 0,
@@ -2111,6 +2160,8 @@ impl MailApp {
             favorites_next: false,
             shared_next: None,
             sync_next: false,
+            directory_next: false,
+            directory_search: Default::default(),
             sync_asking: Default::default(),
             sync_declined: Default::default(),
             shared_page_given: Default::default(),
@@ -2124,6 +2175,7 @@ impl MailApp {
             shared_calendar_tokens: Default::default(),
             shared_refused: Default::default(),
             shared_checking: Default::default(),
+            shared_from_before: Default::default(),
             shared_check_next: None,
             mail_only_next: false,
             signing_in: None,
@@ -2714,16 +2766,13 @@ impl MailApp {
         }
         if let (Ok(_), Some(gone)) = (&r, leaving) {
             let account = gone.id;
-            // A late OAuth response must never restore tokens for a removed account.
-            self.cancel_pending_sign_in(account);
+            // A late OAuth response must never restore tokens for a removed account: every token
+            // and job of its sign-in goes, those of its shared mailboxes with them.
+            self.drop_sign_in_of(account);
             // What the window keeps for it (the command took what came from its server).
             self.forget_favorites(account);
-            self.graph_tokens.remove(&account);
-            self.drop_shared_calendar_tokens_for(account);
-            self.forget_calendar_jobs_for(account);
             self.passwords.remove(&account);
             self.dav_passwords.retain(|(id, _), _| *id != account);
-            self.tokens.remove(&account);
             self.jmap_refused.remove(&account);
             self.ews_unreadable.remove(&account);
             self.ews_signed_in.remove(&account);
@@ -2732,6 +2781,7 @@ impl MailApp {
         }
         if r.is_ok() && id == "account.removeSharedMailbox" {
             self.prune_stale_shared_calendar_tokens();
+            self.prune_stale_shared_mail_tokens();
             self.forget_stale_calendar_job();
         }
         // A calendar and contacts server changed or gone: what was kept for the old one is not
@@ -2742,11 +2792,17 @@ impl MailApp {
         // End a request as soon as its credential identity changes, using the same check as
         // poll_sign_in even when the storage key remains the same.
         if let (Ok(_), Some(before)) = (&r, &edited)
-            && self.session.mailbox.account(before.id).is_some_and(|after| !Self::same_sign_in_identity(before, after))
+            && self.session.mailbox.account(before.id).is_some_and(|after| !self.same_sign_in_identity(before, after))
         {
             self.cancel_pending_sign_in(before.id);
-            self.drop_shared_calendar_tokens_for(before.id);
+            // (What was had with the old sign-in for its shared mailboxes: their calendars'
+            // tokens and their mail's. The account's own go below, when its address, its servers
+            // or its registration changed: another name to sign in with, or another transport
+            // security, keeps them.)
+            self.drop_shared_tokens_for(before.id);
             self.forget_calendar_jobs_for(before.id);
+            // (The directory's token and whether it was allowed were the old sign-in's.)
+            self.forget_directory(Some(before.id));
         }
         // Servers changed: what was kept for the old ones is not given to the new, and the owner
         // is asked again.
@@ -2775,16 +2831,28 @@ impl MailApp {
                 // long): the same clean-up as the change that made it.
                 self.drop_changed_dav_secrets(&was_account);
                 let current = self.session.mailbox.account(account);
+                let same_identity = current.is_some_and(|after| self.same_sign_in_identity(&was_account, after));
+                // (Another tenant or application id under the same name: what the system remembers
+                // under that name was the other's, and goes as it does at the edit that changes it.)
+                let registration = |a: &mailcraft_model::Account| a.oauth.as_ref().map(|o| (o.provider, o.client_id.clone(), o.tenant.clone()));
+                let other_registration = current.is_some_and(|after| registration(&was_account) != registration(after));
+                // (Other servers: what the system remembers for the ones it had goes to none of the
+                // others, as at the edit that changes them.)
+                let other_servers = current.is_some_and(|after| keys(after) != was);
                 if current.map(keys) != Some(was) {
                     self.passwords.remove(&account);
                     self.tokens.remove(&account);
                     self.graph_tokens.remove(&account);
                     self.jmap_refused.remove(&account);
                 }
-                if !current.is_some_and(|after| Self::same_sign_in_identity(&was_account, after)) {
-                    self.cancel_pending_sign_in(account);
-                    self.drop_shared_calendar_tokens_for(account);
-                    self.forget_calendar_jobs_for(account);
+                if other_registration || other_servers {
+                    self.forget_mail_secrets(&was_account);
+                }
+                if !same_identity {
+                    // Every token had with the sign-in it had (its own, those of its shared
+                    // mailboxes, its directory's) and every job that went with it: one check for
+                    // every store.
+                    self.drop_sign_in_of(account);
                 }
             }
             self.prune_stale_shared_calendar_tokens();
@@ -3060,7 +3128,11 @@ impl MailApp {
                 if id.len() > 200 || !id.chars().all(|c| c.is_ascii_alphanumeric() || "-._".contains(c)) {
                     return Some(Err(tl!("An application ID is letters, digits and dashes").to_string()));
                 }
+                // (The application id of every account that names none of its own: another one
+                // is another sign-in for each of them.)
+                let before = self.application_ids();
                 self.ui.microsoft_client_id = id.to_string();
+                self.application_ids_changed(&before);
                 Ok(json!({"value": id}))
             }
             "ui.googleClientId" => {
@@ -3068,7 +3140,9 @@ impl MailApp {
                 if id.len() > 200 || !id.chars().all(|c| c.is_ascii_alphanumeric() || "-._".contains(c)) {
                     return Some(Err(tl!("An application ID is letters, digits and dashes").to_string()));
                 }
+                let before = self.application_ids();
                 self.ui.google_client_id = id.to_string();
+                self.application_ids_changed(&before);
                 Ok(json!({"configured": !id.is_empty()}))
             }
             "ui.closeToTray" => {
@@ -3280,6 +3354,7 @@ impl MailApp {
                     .or_else(|| calendar_view::ui_command(self, id, p))
                     .or_else(|| meeting_dialogs::ui_command(self, id, p))
                     .or_else(|| favorites_sync::ui_command(self, id, p))
+                    .or_else(|| directory_search::ui_command(self, id, p))
                     .or_else(|| approval::ui_command(self, id, p))
                     .or_else(|| graph_switch::ui_command(self, id, p))
                     .or_else(|| updates::ui_command(self, id, p))
@@ -3302,11 +3377,14 @@ impl MailApp {
         mailcraft_host::secrets::secret_key(kind, a)
     }
 
-    /// Whether a pending sign-in still belongs to the saved account. The storage key binds
-    /// its address and endpoints; login, transport security, ownership and OAuth registration
-    /// also belong to its credential identity. Names, signatures and download preferences do not.
-    pub(crate) fn same_sign_in_identity(before: &mailcraft_model::Account, after: &mailcraft_model::Account) -> bool {
-        mailcraft_host::job_sign_in::same_sign_in_identity(before, after)
+    /// Whether two snapshots of an account are the same sign-in: the one check for every token
+    /// and every job of this window. The storage key binds its address and endpoints; login,
+    /// transport security, ownership and OAuth registration also belong to its credential
+    /// identity, the application id as the account signs in with it ([`MailApp::sign_in_snapshot`]:
+    /// one that names none takes this installation's). Names, signatures and download preferences
+    /// do not.
+    pub(crate) fn same_sign_in_identity(&self, before: &mailcraft_model::Account, after: &mailcraft_model::Account) -> bool {
+        mailcraft_host::job_sign_in::same_sign_in_identity(&self.sign_in_snapshot(before), &self.sign_in_snapshot(after))
     }
 
     /// Stop only this account's pending sign-in and remove its waiting text.
@@ -3615,6 +3693,9 @@ impl MailApp {
         let dav = if with_dav { Self::dav_secret_keys(a) } else { Vec::new() };
         let named = ["password", "refresh"].into_iter().flat_map(|kind| Self::secret_keys_of(kind, a)).chain(dav);
         for key in named {
+            if self.secret_read.is_some() {
+                self.secrets_let_go.insert(key.clone());
+            }
             store.delete(&key);
             if store.get(&key).is_none() {
                 gone.push(key);
@@ -3635,6 +3716,9 @@ impl MailApp {
         let keys = Self::secret_keys_of("refresh", account);
         for key in &keys {
             self.secret_cache.remove(key);
+            if self.secret_read.is_some() {
+                self.secrets_let_go.insert(key.clone());
+            }
         }
         let Some(store) = &self.services.secrets else { return };
         let mut gone = Vec::new();
@@ -3694,6 +3778,7 @@ impl MailApp {
         let mail_only = std::mem::take(&mut self.mail_only_next);
         let favorites = std::mem::take(&mut self.favorites_next) && graph;
         let sync = std::mem::take(&mut self.sync_next) && graph;
+        let directory = std::mem::take(&mut self.directory_next) && graph;
         let shared = self.shared_next.take().filter(|_| sync);
         if self.signing_in.is_some() || self.approving() {
             return Err(tl!("Finish signing in first (your browser is waiting)").to_string());
@@ -3724,11 +3809,12 @@ impl MailApp {
             mail_write: graph
                 && (account == 0 || self.session.mailbox.account(account).is_some_and(|a| a.kind == mailcraft_model::AccountKind::Microsoft)),
             sync,
+            directory,
         };
-        let snapshot = self.session.mailbox.account(account).cloned();
+        let snapshot = self.session.mailbox.account(account).map(|a| self.sign_in_snapshot(a));
         let rx = sign_in(request);
         let opening = self.session.openings();
-        self.signing_in = Some(SigningIn { graph, favorites, quiet, account, snapshot, shared, sync, browser, opening, rx, cancel });
+        self.signing_in = Some(SigningIn { graph, favorites, quiet, account, snapshot, shared, sync, directory, browser, opening, rx, cancel });
         self.session.sync_status = waiting.to_string();
         Ok(())
     }
@@ -3963,6 +4049,7 @@ impl MailApp {
                 // What it sends is marked so, on disk, before it leaves (AU3-26).
                 let opening = self.session.openings();
                 let rx = self.hand_graph(account, ask)?;
+                self.graph_signer = Some(self.sign_in_snapshot(&request.account));
                 self.graph_rx = Some((account, quiet, false, opening, rx));
                 return Ok(json!({"pending": "graph", "account": account}));
             }
@@ -4065,7 +4152,7 @@ impl MailApp {
             cancel: self.services.sync_cancel.clone(),
             // A renewed sign-in that isn't the account's own stops the run before the Outbox or
             // anything of the mail goes.
-            signer: Some(signer),
+            signer: Some(signer.clone()),
         };
         self.resume_fetch();
         self.services.sync_cancel.store(false, std::sync::atomic::Ordering::Relaxed);
@@ -4076,6 +4163,7 @@ impl MailApp {
         self.graph_problems.clear();
         self.graph_pieces_taken = 0;
         self.sync_run = Some((account, None, false, quiet));
+        self.graph_signer = Some(self.sign_in_snapshot(&signer));
         self.graph_rx = Some((account, quiet, false, opening, rx));
         self.session.sync_status = tl!("Sending and receiving…").to_string();
         Ok(json!({"started": true, "account": account, "graph": true}))
@@ -4146,7 +4234,9 @@ impl MailApp {
             self.sync_after_secrets.clear();
             self.tokens.clear();
             self.graph_tokens.clear();
+            self.shared_mail_stamps.clear();
             self.shared_calendar_tokens.clear();
+            self.forget_directory(None);
             self.jmap_refused.clear();
             self.jmap_send_asks.clear();
             self.ews_unreadable.clear();
@@ -4328,6 +4418,12 @@ impl MailApp {
     pub fn poll_graph(&mut self) {
         let Some((account, quiet, directory, opening, _)) = &self.graph_rx else { return };
         let (account, quiet, directory, opening) = (*account, *quiet, *directory, *opening);
+        // The data was removed: what a job still brings is nobody's, nothing of it is kept and
+        // nothing is asked for it.
+        if self.data_removed {
+            self.forget_graph_jobs();
+            return;
+        }
         // Another mailbox took the place of the one the job was for: its accounts are other
         // accounts, whatever their ids and addresses, and what the job brings is nobody's
         // (AU3-09, AU3-10). The run is called off; what it sent is found held at its file's next
@@ -4412,10 +4508,27 @@ impl MailApp {
             }
         };
         self.graph_rx = None;
+        // The account went, or the sign-in the job went with is no longer its own (its owner's,
+        // for a shared mailbox): the sign-in the answer brings, and what it says of one, are
+        // nobody's. Nothing of them is kept, and no page is opened for them.
+        let signer = self.graph_signer.take();
+        let voided = !self.graph_job_holds(account, signer.as_ref());
+        if voided {
+            log::info!("graph: the job's account went or its sign-in changed while it ran; its sign-in is let go of, and what it says is not shown");
+            shared_mail_tokens::without_sign_in(&mut result);
+            // (What it says is of the sign-in before, or of an account that went: nobody's to read.)
+            result.errors.clear();
+            self.graph_problems.clear();
+        }
         // The Inbox pass is over: the round goes on (#276).
         if self.inbox_run.take() == Some(account) {
             self.graph_pieces_taken = 0;
             return self.finish_inbox_pass(account, result);
+        }
+        // The account went while its run was under way: the run ends here and says nothing (what
+        // it brought has no account to go to).
+        if voided && self.session.mailbox.account(account).is_none() {
+            return self.end_run_of_gone_account(account);
         }
         // What was handed to Microsoft and whose answer was lost may have gone: held for the
         // owner, never sent again by itself (AU3-26).
@@ -4429,7 +4542,7 @@ impl MailApp {
             &mut said,
         ) {
             self.session.mailbox_changed();
-            if let Some(first) = said.first() {
+            if !voided && let Some(first) = said.first() {
                 self.status(first.clone());
             }
         }
@@ -4578,14 +4691,38 @@ impl MailApp {
         }
     }
 
+    /// A Graph run whose account went while it was under way ends here, and says nothing: what it
+    /// brought has no account to go to. Its place in Send/Receive goes with it.
+    pub(crate) fn end_run_of_gone_account(&mut self, account: Id) {
+        self.graph_pieces_taken = 0;
+        if self.graph_after_sign_in == Some(account) {
+            self.graph_after_sign_in = None;
+        }
+        if self.sync_run.is_some_and(|(whose, ..)| whose == account) {
+            self.sync_run = None;
+        }
+        if self.session.sync_progress.holding(account) {
+            self.session.sync_progress.end(account, false);
+        }
+        if self.session.sync_status == tl!("Sending and receiving…") || self.session.sync_status == tl!("Sending…") {
+            self.session.sync_status.clear();
+        }
+    }
+
     /// A Graph run of an account kept in step through Graph got no token for the mail: the owner
     /// signs in with Microsoft for it when they asked for the run (the run goes on once they
     /// have), and is told how when they didn't.
     fn graph_mail_needs_sign_in(&mut self, account: Id, quiet: bool, after_sign_in: bool, consent: bool) {
         self.session.sync_status.clear();
         if !consent {
-            self.drop_shared_calendar_tokens_for(account);
+            // What was had with the refused sign-in for its shared mailboxes (their calendars'
+            // tokens and their mail's) goes, whoever asked for the run. The account's own stay
+            // when nobody asked: a refusal nobody saw signs nobody out, and the Send/Receive the
+            // owner presses meets the refusal itself and opens the page (below).
+            self.drop_shared_tokens_for(account);
             self.forget_calendar_jobs_for(account);
+            // (And the token and any in-flight search for its directory, had with the same sign-in.)
+            self.drop_directory_token(account);
         }
         let Some(owner) = self.session.mailbox.account(account).cloned() else { return };
         let why = if consent { "the sign-in needs permission for the mail" } else { "the sign-in was refused" };
@@ -4639,6 +4776,7 @@ impl MailApp {
         let snapshot = waiting.snapshot.clone();
         let asked_for = !waiting.quiet;
         let (for_shared, for_sync) = (waiting.shared, waiting.sync);
+        let for_directory = waiting.directory;
         let started_under = waiting.opening;
         let on_the_page = waiting.browser;
         self.signing_in = None;
@@ -4666,7 +4804,7 @@ impl MailApp {
         // A removed or changed credential identity cannot take a late response, even if an ID
         // was reused or the host ignored cancellation. Ordinary account preferences can change.
         let same_identity =
-            snapshot.as_ref().zip(self.session.mailbox.account(account)).is_some_and(|(before, after)| Self::same_sign_in_identity(before, after));
+            snapshot.as_ref().zip(self.session.mailbox.account(account)).is_some_and(|(before, after)| self.same_sign_in_identity(before, after));
         if !same_identity {
             self.session.sync_status.clear();
             return;
@@ -4679,6 +4817,11 @@ impl MailApp {
         // mailbox that was to be read is read), or why not is said.
         if for_sync {
             return self.sync_signed_in(account, answer, for_shared);
+        }
+        // The page for searching the organisation's directory: what was typed is searched now, or
+        // why not is said in Add Shared Mailbox ([`directory_search`]).
+        if for_directory {
+            return self.directory_signed_in(account, answer);
         }
         // The owner picks who signs in on the page: it has to be this account. Somebody else's
         // tokens are neither used nor remembered, mail's or Graph's (#103).
@@ -4775,7 +4918,8 @@ impl MailApp {
     /// at the foot of the window. Never for a sign-in nobody asked for, and never over another
     /// dialog.
     fn sign_in_came_to_nothing(&mut self, account: Id, error: &str, asked_for: bool) {
-        self.drop_shared_calendar_tokens_for(account);
+        self.drop_shared_tokens_for(account);
+        self.drop_directory_token(account);
         log::warn!("sign-in, account {account}: ended without signing in ({:?})", approval::SignInEnd::of(error));
         if approval::SignInEnd::of(error) == approval::SignInEnd::Approval && asked_for && self.dialog.is_none() {
             let dialog = dialogs::Dialog::open("account", self, &json!({"id": account, "page": "approval"}));
@@ -5314,6 +5458,7 @@ impl MailApp {
         self.drive_fetch();
         self.offline_tick();
         self.drive_server_search();
+        self.directory_tick_at(now_ms());
         if self.server_searching.busy() {
             crate::software::repaint_after(ctx, std::time::Duration::from_millis(200));
         }

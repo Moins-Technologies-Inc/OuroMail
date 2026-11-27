@@ -192,8 +192,20 @@ impl MailApp {
         self.subscribed.forget_addresses();
         self.tokens.clear();
         self.graph_tokens.clear();
+        self.shared_mail_stamps.clear();
         self.shared_calendar_tokens.clear();
         self.forget_calendar_jobs();
+        self.forget_directory(None);
+        // The Graph run or Inbox check under way is let go of: its answer is nobody's.
+        self.forget_graph_jobs();
+        // And the jobs that renew a sign-in for themselves (free/busy, the automatic replies, the
+        // to-dos, the rules, the categories): their answers are nobody's too.
+        self.free_busy.forget();
+        (self.auto_replies, self.tasks, self.rules, self.category_sync) = Default::default();
+        if let Some(pending) = self.signing_in.take() {
+            pending.cancel.store(true, std::sync::atomic::Ordering::Relaxed);
+            self.session.sync_status.clear();
+        }
         if let Some(trouble) = self.services.secrets.as_ref().and_then(|store| store.take_trouble()) {
             report.failed.push((tl!("The system's credential store").to_string(), Why::Io(crate::store_trouble_notice(trouble))));
         }

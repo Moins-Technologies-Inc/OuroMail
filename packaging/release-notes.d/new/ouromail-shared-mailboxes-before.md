@@ -1,0 +1,1 @@
+- **Open a shared mailbox again in one click.** A shared mailbox you remove is remembered under its account (at most 20, on this computer only), and Add Shared Mailbox offers it again under Opened before: Add again opens it the way Add does, with the name it had. Forget takes one off the list, Forget all every one.

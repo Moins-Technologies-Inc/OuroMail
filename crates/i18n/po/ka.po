@@ -952,14 +952,24 @@ msgstr "გამგზავნის დამატება"
 msgid "Add Sender to Contacts"
 msgstr "გამგზავნის კონტაქტებში დამატება"
 
-#. command label, interface
-#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs
+#. ribbon
+#: crates/ui-egui/src/ribbon.rs
+#, fuzzy
+msgid ""
+"Add Shared\n"
+"Mailbox"
+msgstr ""
+"საერთო საფოსტო\n"
+"ყუთის დამატება"
+
+#. command label, interface, ribbon location
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Add Shared Mailbox"
 msgstr "საერთო საფოსტო ყუთის დამატება"
 
 #. interface
-#: crates/ui-egui/src/backstage.rs
+#: crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs
 #, fuzzy
 msgid "Add Shared Mailbox…"
 msgstr "საერთო საფოსტო ყუთის დამატება…"
@@ -1047,6 +1057,12 @@ msgstr "ანგარიშის დამატება"
 #, fuzzy
 msgid "Add address"
 msgstr "მისამართის დამატება"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Add again"
+msgstr "ხელახლა დამატება"
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -1333,7 +1349,7 @@ msgid "All the conditions must hold"
 msgstr "ყველა პირობა უნდა სრულდებოდეს"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/forms.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/ui-egui/src/agent_gate.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Allow"
 msgstr "დაშვება"
@@ -1369,6 +1385,12 @@ msgid "Allow MailCraft to read shared mailboxes on the page that opened in your 
 msgstr "მიეცით MailCraft-ს საერთო საფოსტო ყუთების წაკითხვის ნებართვა ბრაუზერში გახსნილ გვერდზე…"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Allow MailCraft to search your organisation's directory on the page that opened in your browser…"
+msgstr "ბრაუზერში გახსნილ გვერდზე მიეცით MailCraft-ს თქვენი ორგანიზაციის კატალოგში ძიების ნებართვა…"
+
+#. interface
 #: crates/ui-egui/src/forms.rs
 #, fuzzy
 msgid "Allow New Time Proposals"
@@ -1379,6 +1401,12 @@ msgstr "ახალი დროის შეთავაზების და
 #, fuzzy
 msgid "Allow Reading Other People's Calendars"
 msgstr "სხვა ადამიანების კალენდრების წაკითხვის ნებართვა"
+
+#. command label
+#: crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Allow Searching the Organisation's Directory"
+msgstr "ორგანიზაციის კატალოგში ძიების დაშვება"
 
 #. command label
 #: crates/ui-egui/src/lib.rs
@@ -2006,6 +2034,12 @@ msgstr "მოითხოვეთ თქვენი To Do სიების�
 #: crates/ui-egui/src/server_sync.rs
 msgid "Ask for permission to read and send from shared mailboxes and to read the calendars shared with you: Microsoft's page opens in your browser. Without it, nothing of them is read or sent."
 msgstr ""
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "Ask for permission to search your organisation's directory in Add Shared Mailbox: Microsoft's page opens in your browser. Without it, you type the shared mailbox's address."
+msgstr "ნებართვის მოთხოვნა, რომ „საერთო საფოსტო ყუთის დამატებაში“ თქვენი ორგანიზაციის კატალოგში მოიძებნოს: Microsoft-ის გვერდი ბრაუზერში გაიხსნება. მის გარეშე საერთო საფოსტო ყუთის მისამართს თავად აკრეფთ."
 
 #. interface
 #: crates/ui-egui/src/backstage.rs
@@ -3645,6 +3679,12 @@ msgid "Close and keep as draft"
 msgstr "დახურვა და მონახაზად შენახვა"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Close the open dialog first, then press Ask again."
+msgstr "ჯერ დახურეთ გახსნილი ფანჯარა, შემდეგ დააჭირეთ „ხელახლა მოთხოვნას“."
+
+#. interface
 #: crates/ui-egui/src/backstage.rs
 #, fuzzy
 msgid "Close this shared mailbox and remove the mail kept for it here. Nothing on the server changes."
@@ -3994,7 +4034,7 @@ msgid "Copy a Message for My Administrator"
 msgstr "შეტყობინების კოპირება ჩემი ადმინისტრატორისთვის"
 
 #. interface, name
-#: crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs
+#: crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "Copy a message for my administrator"
 msgstr "შეტყობინების კოპირება ჩემი ადმინისტრატორისთვის"
@@ -4190,6 +4230,12 @@ msgstr "წერილი „{subject}“ სერვერზე, საქ�
 #, fuzzy
 msgid "Couldn't reach Microsoft to open the calendar of {address}. Try again in a moment."
 msgstr "კალენდრის ({address}) გასახსნელად Microsoft-თან დაკავშირება ვერ მოხერხდა. სცადეთ ცოტა ხანში."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Couldn't reach Microsoft to search the directory. Type the address, or try again in a moment."
+msgstr "კატალოგში საძიებლად Microsoft-თან დაკავშირება ვერ მოხერხდა. აკრიფეთ მისამართი, ან სცადეთ ხელახლა ცოტა ხანში."
 
 #. why a mail server couldn't be used
 #: crates/net/src/push.rs crates/net/src/sync.rs
@@ -4827,6 +4873,48 @@ msgstr "ციფრული ხელმოწერით, ხელმომ
 #, fuzzy
 msgid "Direct Replies To"
 msgstr "პასუხების მიმართვა"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: allowed"
+msgstr "კატალოგში ძიება: დაშვებულია"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: asking on Microsoft's page…"
+msgstr "კატალოგში ძიება: მოთხოვნა Microsoft-ის გვერდზე…"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: needs your administrator's approval"
+msgstr "კატალოგში ძიება: საჭიროა ადმინისტრატორის თანხმობა"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: not answered in this session"
+msgstr "კატალოგში ძიება: ამ სესიაში პასუხი არ გაცემულა"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: not asked in this session"
+msgstr "კატალოგში ძიება: ამ სესიაში ჯერ არ მოთხოვნილა"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: not now (for this session)"
+msgstr "კატალოგში ძიება: ახლა არა (ამ სესიისთვის)"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Directory search: your organisation doesn't allow it"
+msgstr "კატალოგში ძიება: თქვენი ორგანიზაცია ამას არ უშვებს"
 
 #. android, command label, interface, ribbon
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/ComposerScreen.kt crates/engine/src/cmd/compose.rs crates/ui-egui/src/compose.rs crates/ui-egui/src/dialogs.rs crates/ui-egui/src/ribbon.rs
@@ -6012,6 +6100,12 @@ msgid "Finish signing in on Microsoft's page in your browser. MailCraft is waiti
 msgstr "დაასრულეთ შესვლა Microsoft-ის გვერდზე ბრაუზერში. MailCraft გელოდებათ."
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Finish the sign-in in your browser first, then press Ask again."
+msgstr "ჯერ დაასრულეთ შესვლა ბრაუზერში, შემდეგ დააჭირეთ „ხელახლა მოთხოვნას“."
+
+#. interface
 #: crates/ui-egui/src/credits.rs
 msgid "First"
 msgstr ""
@@ -6311,7 +6405,7 @@ msgid "For now, your automatic replies aren't changed: {error}"
 msgstr "ჯერჯერობით თქვენი ავტომატური პასუხები არ იცვლება: {error}"
 
 #. interface
-#: crates/ui-egui/src/ews_setup.rs
+#: crates/ui-egui/src/ews_setup.rs crates/ui-egui/src/shared_before.rs
 #, fuzzy
 msgid "Forget"
 msgstr "დავიწყება"
@@ -6323,10 +6417,22 @@ msgid "Forget Downloaded Calendar and Contacts"
 msgstr "ჩამოტვირთული კალენდრისა და კონტაქტების დავიწყება"
 
 #. command label
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "Forget Shared Mailbox Opened Before"
+msgstr "ადრე გახსნილი საერთო საფოსტო ყუთის დავიწყება"
+
+#. command label
 #: crates/engine/src/cmd/account.rs
 #, fuzzy
 msgid "Forget Trusted Certificate"
 msgstr "სანდო სერტიფიკატის დავიწყება"
+
+#. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Forget all"
+msgstr "ყველას დავიწყება"
 
 #. android, interface
 #: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/PicturesSettings.kt crates/ui-egui/src/reading/remote.rs
@@ -7255,6 +7361,12 @@ msgstr "თუ იმ გვერდზე წერია, რომ ანგ
 #, fuzzy
 msgid "If that page says you need admin approval"
 msgstr "თუ იმ გვერდზე წერია, რომ ადმინისტრატორის თანხმობა გჭირდებათ"
+
+#. interface
+#: crates/ui-egui/src/backstage.rs
+#, fuzzy
+msgid "If you allowed it before, or your administrator did for everybody, the first search in Add Shared Mailbox goes without a question."
+msgstr "თუ ადრე დაუშვით, ან ადმინისტრატორმა ყველასთვის დაუშვა, პირველი ძიება „საერთო საფოსტო ყუთის დამატებაში“ შეკითხვის გარეშე შესრულდება."
 
 #. interface
 #: crates/ui-egui/src/dialogs.rs
@@ -8224,6 +8336,14 @@ msgstr "ეს წესი შეინახეთ ანგარიშის
 #, fuzzy
 msgid "Keep this version"
 msgstr "ამ ვერსიის შენარჩუნება"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Keep typing to narrow the list: only the first {n} is shown."
+msgid_plural "Keep typing to narrow the list: only the first {n} are shown."
+msgstr[0] "აკრიფეთ მეტი სიის შესავიწროებლად: ნაჩვენებია მხოლოდ პირველი {n}."
+msgstr[1] "აკრიფეთ მეტი სიის შესავიწროებლად: ნაჩვენებია მხოლოდ პირველი {n}."
 
 #. interface
 #: crates/ui-egui/src/graph_switch.rs
@@ -9534,6 +9654,12 @@ msgid "Microsoft has no mailbox at this address"
 msgstr "Microsoft-ს ამ მისამართზე საფოსტო ყუთი არ აქვს"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Microsoft is busy. Try again in a moment."
+msgstr "Microsoft დაკავებულია. სცადეთ ხელახლა ცოტა ხანში."
+
+#. interface
 #: crates/ui-egui/src/account_setup.rs
 #, fuzzy
 msgid "Microsoft needs an application ID"
@@ -9990,6 +10116,12 @@ msgstr ""
 #, fuzzy
 msgid "Name (optional)"
 msgstr "სახელი (არასავალდებულო)"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Name or e-mail address"
+msgstr "სახელი ან ელფოსტის მისამართი"
 
 #. interface
 #: crates/ui-egui/src/forms.rs
@@ -10892,6 +11024,12 @@ msgid "Nobody in the address list matches"
 msgstr "მისამართების სიაში შესაბამისი არავინ არის"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Nobody in your organisation's directory matches \"{query}\"."
+msgstr "თქვენი ორგანიზაციის კატალოგში „{query}“-ს არავინ შეესაბამება."
+
+#. interface
 #: crates/ui-egui/src/meeting_dialogs/share.rs
 #, fuzzy
 msgid "Nobody is invited to this appointment."
@@ -11082,7 +11220,7 @@ msgid "Not much room on this phone"
 msgstr "ტელეფონზე ადგილი ცოტაა"
 
 #. android, interface
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/task_sync.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AboutPages.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountDialogs.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/TasksScreen.kt crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/task_sync.rs
 #, fuzzy
 msgid "Not now"
 msgstr "ახლა არა"
@@ -11709,6 +11847,12 @@ msgstr ""
 msgid "Open & Export"
 msgstr "გახსნა და ექსპორტირება"
 
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Open Add Shared Mailbox first"
+msgstr "ჯერ გახსენით „საერთო საფოსტო ყუთის დამატება“"
+
 #. command label
 #: crates/engine/src/cmd/mail.rs
 #, fuzzy
@@ -11926,6 +12070,12 @@ msgid "Open {name}? {why}"
 msgstr "გაიხსნას {name}? {why}"
 
 #. interface
+#: crates/ui-egui/src/shared_before.rs
+#, fuzzy
+msgid "Opened before"
+msgstr "ადრე გახსნილი"
+
+#. interface
 #: crates/ui-egui/src/open_shared.rs
 #, fuzzy
 msgid "Opened the calendar of {name}. It is listed under Shared Calendars, on this computer only."
@@ -12007,6 +12157,12 @@ msgstr "პარამეტრები"
 #, fuzzy
 msgid "Or is it one of these?"
 msgstr "ან იქნებ ერთ-ერთი ესენია?"
+
+#. interface
+#: crates/ui-egui/src/dialogs.rs
+#, fuzzy
+msgid "Or type its address"
+msgstr "ან აკრიფეთ მისი მისამართი"
 
 #. interface
 #: crates/ui-egui/src/ribbon.rs
@@ -13277,6 +13433,12 @@ msgstr "გაზიარებული კალენდრის წაშ�
 msgid "Remove Shared Mailbox"
 msgstr "საერთო საფოსტო ყუთის წაშლა"
 
+#. interface
+#: crates/ui-egui/src/nav.rs
+#, fuzzy
+msgid "Remove Shared Mailbox…"
+msgstr "საერთო საფოსტო ყუთის წაშლა…"
+
 #. command label
 #: crates/ui-egui/src/lib.rs
 #, fuzzy
@@ -14216,7 +14378,7 @@ msgid "Saving the mailbox… {done} of {total} messages"
 msgstr "საფოსტო ყუთის შენახვა… წერილი: {done} / {total}"
 
 #. interface
-#: crates/ui-egui/src/lib.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "Say that this is meant with \"confirmed\": true."
 msgstr "მიუთითეთ, რომ ეს განზრახულია: \"confirmed\": true."
@@ -14403,6 +14565,12 @@ msgstr "ფოსტაში ძიება (სცადეთ from:, has:att
 msgid "Search people"
 msgstr "ადამიანების ძიება"
 
+#. command label
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/lib.rs
+#, fuzzy
+msgid "Search the Organisation's Directory"
+msgstr "ორგანიზაციის კატალოგში ძიება"
+
 #. interface
 #: crates/ui-egui/src/chrome.rs
 #, fuzzy
@@ -14416,6 +14584,12 @@ msgid "Search time zones"
 msgstr "სასაათო სარტყლების ძიება"
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Search your organisation"
+msgstr "ძიება თქვენს ორგანიზაციაში"
+
+#. interface
 #: crates/ui-egui/src/address_book.rs
 #, fuzzy
 msgid "Searching the address list stopped unexpectedly"
@@ -14426,6 +14600,24 @@ msgstr "მისამართების სიაში ძიება მ
 #, fuzzy
 msgid "Searching the server…"
 msgstr "სერვერზე ძიება…"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory isn't allowed. Type the address below, or allow it in File › Info."
+msgstr "თქვენი ორგანიზაციის კატალოგში ძიება დაშვებული არ არის. აკრიფეთ მისამართი ქვემოთ, ან დაუშვით ფაილი › ინფორმაციაში."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory needs your permission. Microsoft's page opens in your browser to ask you, once."
+msgstr "თქვენი ორგანიზაციის კატალოგში ძიებას თქვენი ნებართვა სჭირდება. Microsoft-ის გვერდი გაიხსნება თქვენს ბრაუზერში და ერთხელ გკითხავთ."
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Searching your organisation's directory…"
+msgstr "მიმდინარეობს ძიება თქვენი ორგანიზაციის კატალოგში…"
 
 #. interface
 #: crates/ui-egui/src/address_book.rs
@@ -15581,6 +15773,12 @@ msgstr "ხელახლა შედით და შესვლის გ�
 #, fuzzy
 msgid "Sign in again first"
 msgstr "ჯერ ხელახლა შედით"
+
+#. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Sign in again with Send/Receive to search your organisation's directory."
+msgstr "თქვენი ორგანიზაციის კატალოგში საძიებლად ხელახლა შედით გაგზავნა/მიღებით."
 
 #. interface
 #: crates/ui-egui/src/account_setup/help.rs
@@ -17399,6 +17597,12 @@ msgid "The diagnostics weren't saved, so GitHub's page wasn't opened. Try again,
 msgstr "დიაგნოსტიკა არ შეინახა, ამიტომ GitHub-ის გვერდი არ გაიხსნა. ისევ სცადეთ ან მოხსენით „დიაგნოსტიკის დართვა“."
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "The directory lists people and shared mailboxes alike; the one you pick is checked when it is added."
+msgstr "კატალოგი ერთნაირად აჩვენებს ადამიანებსაც და საერთო საფოსტო ყუთებსაც; არჩეული მოწმდება დამატებისას."
+
+#. interface
 #: crates/ui-egui/src/account_setup/exchange.rs
 #, fuzzy
 msgid "The domain {domain} names a server for Exchange's automatic setup (Autodiscover), so this looks like an Exchange server account. Type your password and press Connect: MailCraft looks for the server and checks the account. Nothing is sent until then."
@@ -18797,7 +19001,7 @@ msgid "This account has no mail server to send the answer through."
 msgstr "ამ ანგარიშს არ აქვს ფოსტის სერვერი, რომლითაც პასუხი გაიგზავნება."
 
 #. interface
-#: crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/lib.rs crates/ui-egui/src/server_sync.rs crates/ui-egui/src/shared_mailboxes.rs
 #, fuzzy
 msgid "This account has no sign-in with Microsoft"
 msgstr "ამ ანგარიშს Microsoft-ით შესვლა არ აქვს"
@@ -20104,7 +20308,7 @@ msgid "Try Signing In Again"
 msgstr "შესვლის ხელახლა ცდა"
 
 #. interface
-#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
+#: crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs crates/ui-egui/src/nav.rs crates/ui-egui/src/reading/remote.rs crates/ui-egui/src/reading/unsubscribe.rs crates/ui-egui/src/report_problem.rs
 #, fuzzy
 msgid "Try again"
 msgstr "ხელახლა ცდა"
@@ -20174,6 +20378,12 @@ msgstr "ტიპი"
 #, fuzzy
 msgid "Type a name in the search box to search the organisation's address list"
 msgstr "ორგანიზაციის მისამართების სიაში მოსაძებნად საძიებო ველში აკრიფეთ სახელი"
+
+#. interface, what a command says
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Type at least two letters of a name or address."
+msgstr "აკრიფეთ სახელის ან მისამართის მინიმუმ ორი ასო."
 
 #. interface
 #: crates/ui-egui/src/account_setup.rs
@@ -20797,7 +21007,7 @@ msgid "What to Do When Your Organisation Has to Approve MailCraft"
 msgstr "რა გააკეთოთ, როცა თქვენმა ორგანიზაციამ MailCraft უნდა დაამტკიცოს"
 
 #. android, interface, name
-#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs
+#: apps/mailcraft-android/app/src/main/kotlin/work/mailcraft/android/AccountScreens.kt crates/engine/src/sync_driver/favorites.rs crates/ui-egui/src/account_setup/help.rs crates/ui-egui/src/backstage.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
 msgid "What to do next"
 msgstr "შემდეგი ნაბიჯი"
@@ -21290,6 +21500,12 @@ msgid "You're working offline. Turn off Work Offline (Send / Receive) to connect
 msgstr "ოფლაინ მუშაობთ. დასაკავშირებლად გამორთეთ „ოფლაინ მუშაობა“ (გაგზავნა / მიღება)."
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "You're working offline: type the address."
+msgstr "თქვენ ხაზგარეშე მუშაობთ: აკრიფეთ მისამართი."
+
+#. interface
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgid "Your automatic replies couldn't be read: {error}"
@@ -21439,6 +21655,12 @@ msgid "Your organisation doesn't let MailCraft read shared mailboxes and the cal
 msgstr ""
 
 #. interface
+#: crates/ui-egui/src/directory_search.rs
+#, fuzzy
+msgid "Your organisation doesn't let MailCraft search its directory. Type the shared mailbox's address instead."
+msgstr "თქვენი ორგანიზაცია MailCraft-ს თავის კატალოგში ძიების ნებას არ აძლევს. სანაცვლოდ აკრიფეთ საერთო საფოსტო ყუთის მისამართი."
+
+#. interface
 #: crates/ui-egui/src/approval.rs
 #, fuzzy
 msgid "Your organisation has approved MailCraft"
@@ -21582,7 +21804,7 @@ msgid "[Draft]"
 msgstr "[მონახაზი]"
 
 #. interface
-#: crates/ui-egui/src/keep_offline.rs crates/ui-egui/src/lib.rs
+#: crates/ui-egui/src/directory_search.rs crates/ui-egui/src/keep_offline.rs crates/ui-egui/src/lib.rs
 #, fuzzy
 msgid "`account` is required"
 msgstr "`account` სავალდებულოა"
@@ -23060,11 +23282,11 @@ msgstr "ჯერ მონიშნეთ ჩანაწერი"
 msgid "shared mailbox"
 msgstr "საერთო საფოსტო ყუთი"
 
-#. what a command says, why a command can't run
-#: crates/engine/src/cmd/shared.rs
+#. interface, what a command says, why a command can't run
+#: crates/engine/src/cmd/shared.rs crates/ui-egui/src/directory_search.rs
 #, fuzzy
-msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
-msgstr "საერთო საფოსტო ყუთები იხსნება Microsoft Graph-ით სინქრონიზებული ანგარიშით"
+msgid "shared mailboxes open under a work or school account kept in step through Microsoft Graph"
+msgstr "საერთო საფოსტო ყუთები იხსნება Microsoft Graph-ით სინქრონიზებული სამსახურის ან სასწავლებლის ანგარიშით"
 
 #. what a command says
 #: crates/model/src/mailbox.rs
@@ -24898,6 +25120,12 @@ msgid "{address} isn't a shared mailbox open here."
 msgstr "{address} აქ გახსნილი საერთო საფოსტო ყუთი არ არის."
 
 #. what a command says
+#: crates/engine/src/cmd/shared.rs
+#, fuzzy
+msgid "{address} isn't among the shared mailboxes opened before"
+msgstr "{address} არ არის ადრე გახსნილ საერთო საფოსტო ყუთებს შორის"
+
+#. what a command says
 #: crates/engine/src/cmd/compose.rs
 #, fuzzy
 msgid "{address} isn't one of this account's sender addresses (add it in Account Settings)"
@@ -26719,6 +26947,14 @@ msgstr ""
 #: crates/ui-egui/src/credits.rs
 msgid "−Lines"
 msgstr ""
+
+#, fuzzy
+#~ msgid "Directory search: not allowed"
+#~ msgstr "კატალოგში ძიება: დაშვებული არ არის"
+
+#, fuzzy
+#~ msgid "shared mailboxes open under an account kept in step through Microsoft Graph"
+#~ msgstr "საერთო საფოსტო ყუთები იხსნება Microsoft Graph-ით სინქრონიზებული ანგარიშით"
 
 #, fuzzy
 #~ msgid "On Wayland, restart MailCraft after enabling this option. A reachable X11/XWayland server and a system tray are required."

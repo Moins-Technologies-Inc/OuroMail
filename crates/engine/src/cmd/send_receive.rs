@@ -25,6 +25,7 @@ pub const ASKS_A_SERVER: &[&str] = &[
     "sync.graphRequest",
     "sync.graphFetchRequest",
     "sync.graphSearchRequest",
+    "sync.directoryRequest",
     "sync.jmapRequest",
     "sync.jmapFetchRequest",
     "sync.ewsRequest",

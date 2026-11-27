@@ -39,6 +39,8 @@ pub use mailcraft_host::tasks::{TasksJob, TasksResult};
 pub struct TaskSync {
     /// The job under way, kept by the host's driver of it ([`TasksJobs`]).
     jobs: TasksJobs,
+    /// The sign-in the job under way went with ([`MailApp::job_signer`]).
+    signer: Option<mailcraft_model::Account>,
     /// The question about the to-dos that exist only here is on screen.
     pub(crate) offer_open: bool,
 }
@@ -81,6 +83,10 @@ impl MailApp {
     }
 
     fn start_tasks_job(&mut self, account: Id, now: f64) -> bool {
+        // (Nothing goes once the data is removed.)
+        if self.data_removed {
+            return false;
+        }
         let Some(owner) = self.session.mailbox.account(account).filter(|a| a.oauth.is_some()).map(|a| a.id) else { return false };
         let kept = self.tokens.get(&account).map(|t| t.refresh.clone()).filter(|r| !r.is_empty());
         let refresh = kept.or_else(|| self.remembered("refresh", owner));
@@ -94,7 +100,11 @@ impl MailApp {
         let graph = self.services.graph_tasks.as_ref().filter(|_| !offline);
         // What the job is handed, the delete marked as gone and the engine told are the host's.
         let oauth = |oauth| mailcraft_engine::sync_driver::effective_oauth(oauth, &ids);
-        self.tasks.jobs.start(&mut self.session, account, |_| refresh, oauth, now, |job| graph.map(|graph| graph(job)))
+        let started = self.tasks.jobs.start(&mut self.session, account, |_| refresh, oauth, now, |job| graph.map(|graph| graph(job)));
+        if started {
+            self.tasks.signer = self.job_signer(account);
+        }
+        started
     }
 
     /// The job answered: keep the refresh token, take in what the server made of the changes, and
@@ -105,6 +115,16 @@ impl MailApp {
         if self.tasks.jobs.stale(&self.session) {
             log::info!("tasks: the answer is for a mailbox that is no longer open; let go of");
             self.tasks = TaskSync::default();
+            return;
+        }
+        // Gone with a sign-in that is no longer the account's own (it went, or its sign-in
+        // changed): the job is let go of, and nothing of what it brings is kept or said.
+        if let Some(account) = self.tasks.jobs.account()
+            && !self.graph_job_holds(account, self.tasks.signer.as_ref())
+        {
+            log::info!("tasks: the account went or its sign-in changed while the job ran; let go of");
+            self.tasks.jobs.forget();
+            self.tasks.signer = None;
             return;
         }
         let lang = crate::i18n::current();

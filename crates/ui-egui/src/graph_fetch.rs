@@ -83,7 +83,7 @@ impl Fetching {
 
 /// A Graph token of this session for `account` that is still good.
 fn access(app: &MailApp, account: Id) -> Option<String> {
-    app.graph_tokens.get(&account).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone())
+    app.graph_token(account).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone())
 }
 
 /// How messages of an account are fetched now, when they can be: by a host that fetches for its

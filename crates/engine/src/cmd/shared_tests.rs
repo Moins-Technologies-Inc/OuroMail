@@ -777,3 +777,125 @@ fn a_reply_in_a_shared_mailbox_starts_with_its_own_reply_signature_and_the_owner
     let body = s.compose.as_ref().unwrap().body.plain();
     assert!(body.contains("Lena") && !body.contains("The front desk"), "{body:?}");
 }
+
+/// Add Shared Mailbox can't be used for a personal Microsoft account (Outlook.com has no shared
+/// mailboxes): the command says so before it is run, as the window's own check does, so that a
+/// ribbon button that follows it is greyed rather than lit and then refused.
+#[test]
+fn add_shared_mailbox_is_disabled_when_the_only_microsoft_account_is_personal() {
+    let mut s = Session::empty();
+    s.run("account.add", &json!({"email": "ada@example.org"})).unwrap();
+    assert!(!s.enabled("account.addSharedMailbox"), "a local account opens none");
+    // Personal by what its sign-in said, and by an address of Outlook.com's own.
+    let said = s
+        .run("account.add", &json!({"email": "ada@personal.example", "kind": "microsoft", "auth": "oauth2", "directory": "personal"}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    assert!(!s.enabled("account.addSharedMailbox"), "a personal Microsoft account opens none");
+    s.run("account.add", &json!({"email": "ada@outlook.com", "kind": "microsoft", "auth": "oauth2"})).unwrap();
+    assert!(!s.enabled("account.addSharedMailbox"), "an Outlook.com address with nothing else said is a personal one");
+    let refused = add(&mut s, json!({"address": SHARED})).unwrap_err();
+    assert!(refused.contains("work or school"), "{refused}");
+    let named = add(&mut s, json!({"account": said, "address": SHARED})).unwrap_err();
+    assert!(named.contains("work or school"), "named, it is refused before it runs: {named}");
+    assert!(s.mailbox.accounts.iter().all(|a| !a.is_shared()));
+}
+
+/// With a work or school account beside a personal one, the command is enabled and opens the
+/// mailbox under the work account, the first that can have one; a shared mailbox itself never
+/// counts as an account another one is opened under.
+#[test]
+fn add_shared_mailbox_is_enabled_for_a_work_account_and_never_for_a_shared_one() {
+    let mut s = Session::empty();
+    let personal = s
+        .run("account.add", &json!({"email": "ada@personal.example", "kind": "microsoft", "auth": "oauth2", "directory": "personal"}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let work = s.run("account.add", &json!({"email": OWNER, "kind": "microsoft", "auth": "oauth2", "directory": "organisation"})).unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    assert!(s.enabled("account.addSharedMailbox"));
+    let shared = add(&mut s, json!({"address": SHARED})).unwrap();
+    assert_eq!(s.mailbox.account(shared).and_then(|a| a.shared_of), Some(work), "under the work account, not the personal one first");
+    assert!(s.mailbox.account(personal).is_some_and(|a| !a.can_open_shared()));
+    assert!(s.mailbox.account(shared).is_some_and(|a| !a.can_open_shared()), "a shared mailbox opens no other");
+    // The work account becomes a personal one: the shared mailbox left over doesn't keep it enabled.
+    if let Ok(a) = s.mailbox.account_mut(work) {
+        a.oauth = Some(mailcraft_model::OAuth { directory: mailcraft_model::Directory::Personal, ..Default::default() });
+    }
+    assert!(!s.enabled("account.addSharedMailbox"));
+}
+
+// ---- the directory's search (Add Shared Mailbox) ----
+
+/// A session with a work or school account, a personal one, a local one and a shared mailbox.
+fn directory_session() -> (Session, Id, Id, Id, Id) {
+    let mut s = Session::empty();
+    let local = s.run("account.add", &json!({"email": "ada@example.org"})).unwrap()["id"].as_u64().unwrap();
+    let personal = s
+        .run("account.add", &json!({"email": "ada@personal.example", "kind": "microsoft", "auth": "oauth2", "directory": "personal"}))
+        .unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let work = s.run("account.add", &json!({"email": OWNER, "kind": "microsoft", "auth": "oauth2", "directory": "organisation"})).unwrap()["id"]
+        .as_u64()
+        .unwrap();
+    let shared = add(&mut s, json!({"account": work, "address": SHARED})).unwrap();
+    (s, local, personal, work, shared)
+}
+
+#[test]
+fn a_directory_request_is_the_typed_text_as_it_is_sent() {
+    let (mut s, ..) = directory_session();
+    let work = s.mailbox.accounts.iter().find(|a| a.can_open_shared()).unwrap().id;
+    let before = serde_json::to_string(&s.mailbox).unwrap();
+    let asked = s.run("sync.directoryRequest", &json!({"account": work, "text": "  Help\tDesk & co\u{200b}  "})).unwrap();
+    assert_eq!(asked, json!({"account": work, "text": "Help Desk co"}));
+    // Cut to 64 characters.
+    let long = "a".repeat(200);
+    let asked = s.run("sync.directoryRequest", &json!({"account": work, "text": long})).unwrap();
+    assert_eq!(asked["text"].as_str().unwrap().chars().count(), 64);
+    // Fewer than two characters left: nothing to ask, and it says so.
+    for typed in ["", "a", " a ", "&", "\u{200b}b\u{200b}"] {
+        let refused = s.run("sync.directoryRequest", &json!({"account": work, "text": typed})).unwrap_err().to_string();
+        assert!(refused.contains("at least two"), "{typed:?}: {refused}");
+    }
+    assert_eq!(serde_json::to_string(&s.mailbox).unwrap(), before, "nothing of it is kept");
+}
+
+#[test]
+fn a_directory_request_is_for_a_work_or_school_account_only() {
+    let (mut s, local, personal, work, shared) = directory_session();
+    assert!(s.run("sync.directoryRequest", &json!({"account": work, "text": "he"})).is_ok());
+    for account in [local, personal, shared, 9_999] {
+        assert!(s.run("sync.directoryRequest", &json!({"account": account, "text": "help"})).is_err(), "{account}");
+    }
+    for params in
+        [json!({}), json!({"text": "help"}), json!({"account": work}), json!({"account": work, "text": 7}), json!({"account": "x", "text": "he"})]
+    {
+        assert!(s.run("sync.directoryRequest", &params).is_err(), "{params}");
+    }
+}
+
+#[test]
+fn a_directory_request_waits_while_working_offline() {
+    let (mut s, .., work, _) = directory_session();
+    s.run("sync.offline", &json!({"value": true})).unwrap();
+    assert!(s.run("sync.directoryRequest", &json!({"account": work, "text": "help"})).is_err());
+}
+
+#[test]
+fn an_agent_never_searches_the_directory_nor_answers_its_permission() {
+    use crate::agent::{Access, Class, Verdict, access, check};
+    let (s, .., work, _) = directory_session();
+    for id in ["sync.directoryRequest", "ui.searchDirectory", "ui.allowDirectory"] {
+        assert_eq!(access(id), Some(Access::Never), "{id}");
+        for allow in [&[][..], &Class::ALL[..]] {
+            for params in [json!({"account": work, "text": "help"}), json!({"account": work, "confirmed": true}), json!({})] {
+                assert!(matches!(check(&s, id, &params, allow), Verdict::Refuse(_)), "{id} {params} {allow:?}");
+            }
+        }
+    }
+}

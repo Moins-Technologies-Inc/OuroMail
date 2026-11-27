@@ -56,6 +56,8 @@
 //!   `/users/{address}/sendMail` answer a shared mailbox's folders, drafts, sending and
 //!   mail as `/me` answers the owner's, its changes made in it alone ([`State::add_other`]); 403 when the owner wasn't given Full Access to
 //!   it, 404 for an address it doesn't know.
+//! - **The directory** (Add Shared Mailbox). `GET /v1.0/users` with `$search`, `$select` and
+//!   `$top` as the reference has them for a sign-in with `User.ReadBasic.All`: [`directory`].
 //! - **Search** (R6.2). `$search` on `/me/messages` and `/me/mailFolders/{id}/messages` (and a
 //!   shared mailbox's), as the reference has it for messages: [`search`].
 //! - **Messages.** A folder's message delta in pages, with next and delta links, `@removed`,
@@ -83,6 +85,7 @@
 //! thread that asks for it and until the guard is dropped.
 
 mod changes;
+mod directory;
 mod drafts;
 mod messages;
 mod people;
@@ -92,6 +95,7 @@ mod signin;
 mod todo;
 
 pub use changes::Fault;
+pub use directory::{DirectoryUser, NEEDS_EVENTUAL, READ_BASIC};
 pub use drafts::Attached;
 pub use messages::{Mail, Message};
 pub use people::{Access, Person};
@@ -480,6 +484,8 @@ pub struct State {
     /// How many seconds a request that is told to come back later is told to wait (`Retry-After`);
     /// `None` for one.
     pub retry_after: Option<u32>,
+    /// A 504 says when to come back too (`Retry-After`), as a 429 and a 503 always do here.
+    pub retry_after_on_504: bool,
     /// Lists of folders include hidden ones even when they aren't asked for (`includeHiddenFolders`).
     /// (A client has to leave them out either way.)
     pub lists_hidden: bool,
@@ -510,6 +516,14 @@ pub struct State {
     pub others: Vec<OtherMailbox>,
     /// The people whose calendars were shared with the owner (#70), at `/users/{address}/calendar…`.
     pub people: Vec<Person>,
+    /// The organisation's directory, at `/v1.0/users` (Add Shared Mailbox, [`directory`]).
+    pub directory: Vec<DirectoryUser>,
+    /// The directory may not be read (a guest, an organisation that doesn't let the program):
+    /// 403 to every request for it.
+    pub directory_denied: bool,
+    /// What every request for the directory is answered with instead, as it is (200): hostile
+    /// answers.
+    pub directory_answer: Option<String>,
     /// Calendars of the owner's list that somebody else shares, with the owner the list names for
     /// each (its id, the address, the name): an invitation accepted in Outlook ([`State::add_shared_by`]).
     /// Any other calendar that is shared names `else@example.org`.
@@ -2141,6 +2155,7 @@ impl State {
             (_, ["v1.0", "me", "mailFolders"]) => self.mail_folders(asked, method, None, &[]),
             (_, ["v1.0", "me", "mailFolders", folder, rest @ ..]) => self.mail_folders(asked, method, Some(folder), rest),
             (_, ["v1.0", "me", rest @ ..]) => self.me(asked, method, rest),
+            ("GET", ["v1.0", "users"]) => self.directory_search(asked),
             (_, ["v1.0", "users", user, rest @ ..]) => {
                 let user = user.to_string();
                 self.of_user(asked, method, &user, rest)
@@ -2780,6 +2795,7 @@ impl StandIn {
                     continue;
                 }
                 let wait = state.retry_after.unwrap_or(1);
+                let says_when = status == 429 || status == 503 || (status == 504 && state.retry_after_on_504);
                 let location = state.location.take().map(|to| format!("Location: {to}\r\n")).unwrap_or_default();
                 let raw = state.raw.take();
                 drop(state);
@@ -2798,7 +2814,7 @@ impl StandIn {
                     429 => "Too Many Requests",
                     _ => "Other",
                 };
-                let retry = if status == 429 || status == 503 { format!("Retry-After: {wait}\r\n") } else { String::new() };
+                let retry = if says_when { format!("Retry-After: {wait}\r\n") } else { String::new() };
                 let answer = match (raw, body) {
                     (Some((kind, raw)), _) => {
                         format!("HTTP/1.1 {status} {reason}\r\nContent-Type: {kind}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{raw}", raw.len())

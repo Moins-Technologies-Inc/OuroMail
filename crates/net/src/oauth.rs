@@ -24,6 +24,13 @@
 //! come from [`refresh_graph_with_favorites`], which falls back to what a sign-in covered
 //! before.
 //!
+//! Searching the organisation's directory for a shared mailbox to open (Add Shared Mailbox)
+//! takes one permission more (`User.ReadBasic.All`). It is asked for by itself too, and never on
+//! the page of a sign-in nor with any other token: only when the owner searches and the window has
+//! asked him ([`sign_in_for_directory`]), and a search asks for a token with it and nothing else
+//! ([`refresh_graph_directory`]). Many organisations keep it for an administrator to give, and
+//! nobody's mail or shared mailboxes are to wait on a search they may never use.
+//!
 //! Everything else an owner can give is put to him on the page of a sign-in (2026-11-17): the
 //! to-dos' and the mailbox settings' (#661), and what reading and sending from a shared mailbox
 //! and reading the calendars shared with him take (`Mail.ReadWrite.Shared`, `Mail.Send.Shared`,
@@ -177,6 +184,16 @@ const MICROSOFT_GRAPH_TASKS: &str = "https://graph.microsoft.com/Tasks.ReadWrite
 /// once for it and for [`MICROSOFT_GRAPH_TASKS`] together ([`sign_in_for_sync`]). The working
 /// hours are never written with it, nor anything else of the settings.
 const MICROSOFT_GRAPH_SETTINGS_WRITE: &str = "https://graph.microsoft.com/MailboxSettings.ReadWrite";
+/// What searching the organisation's directory for a shared mailbox to open takes (Add Shared
+/// Mailbox, [`crate::graph::search_directory`]): reading the basic profile (name and address) of
+/// the people and the shared mailboxes of the owner's organisation, which this permission can't
+/// tell apart. **Asked for by itself**, as the Favorites' are: never on the page of a sign-in and
+/// never with any other token, so that an organisation that keeps it for an administrator costs
+/// nobody their mail or their shared mailboxes. The owner is asked for it on Microsoft's page only
+/// once the window has asked him, the first time he searches ([`sign_in_for_directory`]); a
+/// search asks for a token with it and for nothing else ([`refresh_graph_directory`]). On the
+/// administrator's list. Work and school accounts only: a personal account has no directory.
+const MICROSOFT_GRAPH_DIRECTORY: &str = "https://graph.microsoft.com/User.ReadBasic.All";
 /// Whether the page of an ordinary sign-in also puts the Favorites' permissions to the owner,
 /// so that one page settles everything. **Off**: Microsoft's permissions reference lists
 /// `MailboxConfigItem.Read` as one that takes an administrator's consent in an organisation
@@ -555,8 +572,9 @@ pub enum FavoritesRefusal {
 /// Microsoft Graph's sending, calendar, contacts, mailbox settings and, for an account kept in step
 /// through Graph, its mail; keeping the to-dos, the rules, the automatic replies and the
 /// categories in step; reading and sending from shared mailboxes and reading the calendars shared
-/// with the owner), and what reading the Favorites of Outlook through Graph takes, which is the
-/// one thing still asked for by itself. Exactly that, and nothing more.
+/// with the owner), what reading the Favorites of Outlook through Graph takes and what searching
+/// the organisation's directory for a shared mailbox takes, the two things still asked for by
+/// themselves. Exactly that, and nothing more.
 ///
 /// A sign-in asks for no more than is here: a page that asked for one permission an
 /// administrator had not approved would send the owner to find one again.
@@ -573,6 +591,7 @@ fn admin_scope() -> String {
         MICROSOFT_GRAPH_SHARED_CALENDARS,
         MICROSOFT_GRAPH_TASKS,
         MICROSOFT_GRAPH_SETTINGS_WRITE,
+        MICROSOFT_GRAPH_DIRECTORY,
         SIGN_IN_SCOPE,
     ]);
     all.collect::<Vec<_>>().join(" ")
@@ -772,6 +791,86 @@ fn sign_in_for_favorites_within(
         (Policy::Account, _) | (Policy::None, About::Scope) => FavoritesRefusal::Account,
         (Policy::None, _) => FavoritesRefusal::Other(refused.error),
     })
+}
+
+/// What the page that asks for the directory asks for ([`sign_in_for_directory`]): what Microsoft
+/// Graph was asked for before, the mailbox's settings with it as a sign-in has them, and searching
+/// the organisation's directory on top. Nothing is put beside it on the page, and nothing is asked
+/// again for less: a no is the answer.
+fn directory_endpoints(oauth: &OAuth) -> Endpoints {
+    let plain = Endpoints::for_resource(oauth, Resource::Graph);
+    let scope = format!("{MICROSOFT_GRAPH} {MICROSOFT_GRAPH_EXTRAS} {MICROSOFT_GRAPH_DIRECTORY} {SIGN_IN_SCOPE}");
+    Endpoints { scope, consent: String::new(), fewer: String::new(), lesser: String::new(), ..plain }
+}
+
+/// Ask the owner, on the provider's page, to let this program search his organisation's directory
+/// for a shared mailbox to open (`User.ReadBasic.All`), beside what Microsoft Graph was asked for
+/// before. Only once the window has asked him, the first time he searches in Add Shared Mailbox;
+/// never with a sign-in, and never for a personal account, which has no directory (refused here
+/// without a page). The tokens that come back are Graph's, for all of it, and the refresh token is
+/// the account's newest.
+///
+/// A page that is refused costs nothing that was had, is not asked again for less, and says whose
+/// no it is ([`FavoritesRefusal`]); tokens that don't cover the directory after all are
+/// [`NetError::ConsentNeeded`].
+pub fn sign_in_for_directory(oauth: &OAuth, login_hint: &str, open: &dyn Fn(&str), cancel: &AtomicBool) -> Result<Tokens, FavoritesRefusal> {
+    let endpoints = directory_endpoints(oauth);
+    sign_in_for_directory_at(&endpoints, oauth, login_hint, open, cancel, SIGN_IN_TIMEOUT, &RedirectStrategy::Loopback)
+}
+
+/// [`sign_in_for_directory`] at `endpoints`, waiting no longer than `patience`, coming back the
+/// way `via` says.
+fn sign_in_for_directory_at(
+    endpoints: &Endpoints,
+    oauth: &OAuth,
+    login_hint: &str,
+    open: &dyn Fn(&str),
+    cancel: &AtomicBool,
+    patience: Duration,
+    via: &RedirectStrategy,
+) -> Result<Tokens, FavoritesRefusal> {
+    if oauth.provider != OAuthProvider::Microsoft || oauth.is_personal(login_hint) {
+        return Err(FavoritesRefusal::Account);
+    }
+    let asked = attempt_via(endpoints, "", oauth, login_hint, open, cancel, patience, via);
+    let tokens = asked.map_err(|refused| match (refused.policy, refused.about) {
+        (Policy::Approval, _) => FavoritesRefusal::Approval,
+        (Policy::Blocked, _) => FavoritesRefusal::Organisation,
+        (Policy::Account, _) | (Policy::None, About::Scope) => FavoritesRefusal::Account,
+        (Policy::None, _) => FavoritesRefusal::Other(refused.error),
+    })?;
+    granted(tokens, MICROSOFT_GRAPH_DIRECTORY).map_err(FavoritesRefusal::Other)
+}
+
+/// What the tokens of a search of the organisation's directory are asked for (Add Shared
+/// Mailbox): what Graph is asked for, and reading the directory's basic profiles on top. The one
+/// token request that names [`MICROSOFT_GRAPH_DIRECTORY`].
+fn directory_scope() -> String {
+    format!("{MICROSOFT_GRAPH} {MICROSOFT_GRAPH_DIRECTORY} {SIGN_IN_SCOPE}")
+}
+
+/// Tokens for a search of the organisation's directory (Add Shared Mailbox): asked for with
+/// `User.ReadBasic.All`, and for nothing less, as [`refresh_graph_tasks`] is for the to-dos. A
+/// sign-in that doesn't cover it gets [`NetError::ConsentNeeded`]: nothing is searched, and the
+/// window asks the owner ([`sign_in_for_directory`]). `mail` is how the account's mail is had, as
+/// for [`refresh_graph_tasks`]. The refresh token that comes back is the account's newest.
+pub fn refresh_graph_directory(oauth: &OAuth, refresh_token: &str, mail: Resource) -> Result<GraphTokens, NetError> {
+    let endpoints = Endpoints::for_resource(oauth, Resource::Graph);
+    refresh_graph_directory_at(&endpoints, (&Endpoints::for_resource(oauth, mail), mail), oauth, refresh_token)
+}
+
+/// [`refresh_graph_directory`] at endpoints other than the provider's usual ones: `mail` for the
+/// account's mail, and how it is had.
+pub fn refresh_graph_directory_at(
+    endpoints: &Endpoints,
+    mail: (&Endpoints, Resource),
+    oauth: &OAuth,
+    refresh_token: &str,
+) -> Result<GraphTokens, NetError> {
+    let endpoints = Endpoints { scope: directory_scope(), ..endpoints.clone() };
+    let got = refresh_by_itself_at(&endpoints, mail, oauth, refresh_token, "searching the directory")?;
+    let tokens = granted(got.tokens, MICROSOFT_GRAPH_DIRECTORY)?;
+    Ok(GraphTokens { tokens, extras_missing: true, covers_favorites: false })
 }
 
 /// What the tokens of an account's Graph run for a shared mailbox are asked for (#70): what its
@@ -2077,6 +2176,8 @@ pub fn sign_in_explained_via(
 mod google;
 pub use google::{refresh_google_at, sign_in_google_at};
 
+#[cfg(test)]
+mod directory_tests;
 #[cfg(test)]
 mod google_tests;
 #[cfg(test)]

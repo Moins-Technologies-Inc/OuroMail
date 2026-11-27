@@ -58,6 +58,8 @@ pub(crate) use mailcraft_engine::sync_driver::free_busy::{Day, Key, Look, addres
 pub(crate) struct Store {
     /// The question in flight, the mailbox opening it was asked under, and the answer to come.
     rx: Option<(Key, u64, Receiver<FreeBusyResult>)>,
+    /// The sign-in the question went with ([`MailApp::job_signer`]).
+    signer: Option<mailcraft_model::Account>,
     /// How many questions went to the host so far.
     pub(crate) asked: u64,
 }
@@ -71,7 +73,7 @@ impl Store {
     /// Another mailbox took the place of the open one: the question out is let go of (what was
     /// found out goes with the accounts it was for, in the engine).
     pub(crate) fn forget(&mut self) {
-        self.rx = None;
+        (self.rx, self.signer) = (None, None);
     }
 }
 
@@ -100,7 +102,7 @@ impl MailApp {
         let (mut look, to_ask) = self.session.free_busy_look(calendar, people, day, &facts, now);
         let Some(ToAsk { account, key, ask }) = to_ask else { return look };
         let Some(oauth) = account.oauth.clone() else { return look };
-        let access = self.graph_tokens.get(&account.id).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone()).unwrap_or_default();
+        let access = self.graph_token(account.id).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone()).unwrap_or_default();
         let kept = self.tokens.get(&account.id).map(|t| t.refresh.clone()).filter(|r| !r.is_empty());
         let refresh = kept.or_else(|| self.remembered("refresh", account.id)).unwrap_or_default();
         let failed = if access.is_empty() && refresh.is_empty() {
@@ -108,10 +110,12 @@ impl MailApp {
         } else {
             ask.as_ref().err().cloned()
         };
-        let started = match (failed.is_none(), ask, &self.services.free_busy) {
+        // (Nothing is asked once the data is removed.)
+        let started = match (failed.is_none() && !self.data_removed, ask, &self.services.free_busy) {
             (true, Ok(ask), Some(host)) => {
                 let request = FreeBusyRequest { account: account.clone(), oauth: self.effective_oauth(oauth), refresh, access, ask };
                 self.free_busy.rx = Some((key.clone(), self.session.openings(), host(request)));
+                self.free_busy.signer = self.job_signer(account.id);
                 self.free_busy.asked = self.free_busy.asked.saturating_add(1);
                 true
             }
@@ -145,6 +149,13 @@ impl MailApp {
         let key = key.clone();
         self.free_busy.rx = None;
         let account = key.account;
+        // Asked with a sign-in that is no longer the account's own (it went, or its sign-in
+        // changed): nothing of the answer is kept, and nothing of it is said.
+        let signer = self.free_busy.signer.take();
+        if !self.graph_job_holds(account, signer.as_ref()) {
+            log::info!("free/busy: the account went or its sign-in changed while it was asked; let go of");
+            return;
+        }
         if result.token_refused {
             self.graph_tokens.remove(&account);
         }

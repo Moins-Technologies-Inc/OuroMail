@@ -70,11 +70,16 @@ impl MailApp {
         self.session.driver.calendar.forget_jobs();
     }
 
-    /// Let go of an in-flight calendar job or connection check if it belongs to `account` or uses
-    /// `account`'s sign-in (for a shared mailbox owned by `account`).
+    /// Let go of the in-flight calendar job if it belongs to `account` or uses `account`'s
+    /// sign-in (for a shared mailbox owned by `account`), and of the connection check if it is
+    /// `account`'s: each by itself, so that another account's job or check goes on.
     pub(crate) fn forget_calendar_jobs_for(&mut self, account: Id) {
-        if self.calendar.jobs.involves(account) || self.calendar.check_rx.as_ref().is_some_and(|(id, _, _)| *id == account) {
-            self.forget_calendar_jobs();
+        if self.calendar.jobs.involves(account) {
+            self.calendar.jobs.forget();
+            self.session.driver.calendar.forget_jobs();
+        }
+        if self.calendar.check_rx.as_ref().is_some_and(|(id, _, _)| *id == account) {
+            self.calendar.check_rx = None;
         }
     }
 
@@ -399,7 +404,7 @@ impl MailApp {
             return Err(tl!("The calendar is being updated: try again in a moment.").to_string());
         }
         let account = owner.id;
-        let access = self.graph_tokens.get(&account).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone()).unwrap_or_default();
+        let access = self.graph_token(account).filter(|t| t.fresh(mailcraft_time::now())).map(|t| t.access.clone()).unwrap_or_default();
         let kept = self.tokens.get(&account).map(|t| t.refresh.clone()).filter(|r| !r.is_empty());
         let refresh = kept.or_else(|| self.remembered("refresh", owner.id)).unwrap_or_default();
         if access.is_empty() && refresh.is_empty() {

@@ -30,18 +30,11 @@
 
 use mailcraft_engine::sync_driver::Pressed;
 use mailcraft_model::sync::SharedRefusal;
-use mailcraft_model::{Account, AccountKind, FolderKind, Id};
+use mailcraft_model::{Account, FolderKind, Id};
 use serde_json::{Value, json};
 
 use crate::dialogs::Dialog;
-use crate::{GraphRequest, GraphResult, MailApp, Tokens};
-
-/// Whether `a` is an account a shared mailbox may be opened under: a Microsoft account kept in
-/// step through Graph, of a work or school (not a personal Microsoft account, which has none),
-/// and no shared mailbox itself.
-pub(crate) fn can_open_shared(a: &Account) -> bool {
-    a.kind == AccountKind::Microsoft && !a.is_shared() && a.oauth.as_ref().is_none_or(|oauth| !oauth.is_personal(&a.email))
-}
+use crate::{GraphRequest, GraphResult, MailApp};
 
 /// What the owner is told when Microsoft won't open the shared mailbox at `address` (S1).
 fn refused_words(why: SharedRefusal, address: &str) -> String {
@@ -142,6 +135,7 @@ impl MailApp {
             self.session.driver.sending.allowed(account);
         }
         self.sync_run = Some((account, None, false, quiet));
+        self.graph_signer = Some(self.sign_in_snapshot(&owner));
         self.graph_rx = Some((account, quiet, false, opening, rx));
         self.session.sync_status = tl!("Sending and receiving…").to_string();
         Ok(json!({"started": true, "account": account, "graph": true, "shared": true}))
@@ -151,11 +145,16 @@ impl MailApp {
     /// token as his and the access token for this mailbox, ask for the permission when it is
     /// missing, and say what went wrong.
     pub(crate) fn finish_shared_mail(&mut self, account: Id, quiet: bool, mut result: GraphResult) {
+        // The data was removed: nothing of the run is kept, and nothing is asked for it.
+        if self.data_removed {
+            return;
+        }
         let owner = self.session.mailbox.owner_of(account).map(|o| (o.id, o.email.clone()));
         let mut errors = std::mem::take(&mut result.errors);
         errors.append(&mut self.graph_problems);
         if result.token_refused {
-            self.graph_tokens.remove(&account);
+            // (Its stamp with it.)
+            self.drop_shared_mail_token(account);
         }
         // (Only the owner's own sign-in: somebody else's is neither kept nor remembered, AU3-10.)
         let tokens = result.tokens.take().filter(|tokens| owner.as_ref().is_some_and(|(owner, _)| !self.signed_in_as_other(*owner, tokens)));
@@ -166,8 +165,8 @@ impl MailApp {
                     kept.refresh = tokens.refresh.clone();
                 }
             }
-            let now = mailcraft_time::now();
-            self.graph_tokens.insert(account, Tokens { expires_at: tokens.expires_at.clamp(now, now.saturating_add(86_400)), ..tokens });
+            // (Stamped with the owner's sign-in it was had with: used for no other.)
+            self.keep_shared_mail_token(account, tokens);
         }
         if let Some(mail) = result.mail.take() {
             if let Some(why) = mail.refused {
@@ -423,12 +422,24 @@ impl MailApp {
             self.shared_check_next = None;
         }
         self.shared_refused.remove(&shared);
-        self.graph_tokens.remove(&shared);
-        self.drop_shared_calendar_tokens_for(shared);
+        self.drop_shared_mail_token(shared);
+        self.drop_shared_tokens_for(shared);
         self.forget_calendar_jobs_for(shared);
+        // Remembered among those opened before only when it was added again from that list: a
+        // typed address that wasn't kept was never there for the owner (Q4).
+        let remember = self.shared_from_before.remove(&shared);
         if self.session.mailbox.account(shared).is_some_and(Account::is_shared) {
-            let _ = self.execute("account.removeSharedMailbox", json!({"id": shared}));
+            let _ = self.execute("account.removeSharedMailbox", json!({"id": shared, "remember": remember}));
         }
+    }
+
+    /// Note that the shared mailbox `shared` was just added again from Opened before (when
+    /// `from_before`), so that one that isn't kept is remembered again.
+    pub(crate) fn note_from_before(&mut self, shared: Id, from_before: bool) -> &mut Self {
+        if from_before {
+            self.shared_from_before.insert(shared);
+        }
+        self
     }
 
     /// What reading a shared mailbox being added came to: kept and the dialog closed, or removed
@@ -441,6 +452,7 @@ impl MailApp {
         match outcome {
             Ok(()) => {
                 self.shared_checking.remove(&shared);
+                self.shared_from_before.remove(&shared);
                 if ours {
                     self.set_dialog(None);
                 }

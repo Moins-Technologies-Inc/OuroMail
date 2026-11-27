@@ -36,7 +36,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, TryRecvError};
 
 use mailcraft_engine::sync_driver::Start;
-use mailcraft_model::{AccountKind, Id};
+use mailcraft_model::{Account, AccountKind, Id};
 use serde_json::{Value, json};
 
 use crate::{GraphRequest, GraphResult, MailApp, Tokens};
@@ -58,7 +58,7 @@ pub(crate) struct InboxCheck {
     last: i64,
     /// Checks that gave way to a run: only their answer's sign-in is still waited for.
     /// (With the mailbox opening each was started under: one for another mailbox is let go of.)
-    gave_way: Vec<(Id, u64, Receiver<GraphResult>)>,
+    gave_way: Vec<(Id, u64, Option<Account>, Receiver<GraphResult>)>,
     /// Accounts whose last check went wrong and said so: said once, until one gets through.
     failing: HashSet<Id>,
 }
@@ -145,7 +145,8 @@ impl MailApp {
             cancel.store(true, Ordering::Relaxed);
         }
         if let Some((account, _, _, opening, job)) = self.graph_rx.take() {
-            self.inbox_check.gave_way.push((account, opening, job));
+            let signer = self.graph_signer.take();
+            self.inbox_check.gave_way.push((account, opening, signer, job));
             self.take_in_given_way();
         }
         self.graph_pieces = None;
@@ -202,7 +203,7 @@ impl MailApp {
         // A check every minute goes with the token it had a minute ago while that is still good,
         // as the calendar's job does: one request, not two.
         let access = if check {
-            self.graph_tokens.get(&account).filter(|t| t.fresh(mailcraft_time::now() + 60)).map(|t| t.access.clone()).unwrap_or_default()
+            self.graph_token(account).filter(|t| t.fresh(mailcraft_time::now() + 60)).map(|t| t.access.clone()).unwrap_or_default()
         } else {
             String::new()
         };
@@ -235,6 +236,7 @@ impl MailApp {
         }
         let opening = self.session.openings();
         let job = graph(ask);
+        self.graph_signer = Some(self.sign_in_snapshot(&owner));
         self.graph_pieces = Some(taken);
         self.graph_problems.clear();
         self.graph_pieces_taken = 0;
@@ -255,15 +257,22 @@ impl MailApp {
 
     /// The answers of checks that gave way, as they come: their sign-in is kept, nothing else.
     fn take_in_given_way(&mut self) {
+        // The data was removed: their answers are nobody's.
+        if self.data_removed {
+            self.inbox_check.gave_way.clear();
+            return;
+        }
         let mut waiting = Vec::new();
-        for (account, opening, job) in std::mem::take(&mut self.inbox_check.gave_way) {
+        for (account, opening, signer, job) in std::mem::take(&mut self.inbox_check.gave_way) {
             if opening != self.session.openings() {
                 log::info!("inbox check: its answer is for a mailbox that is no longer open; let go of");
                 continue;
             }
             match job.try_recv() {
-                Ok(result) => self.keep_inbox_tokens(account, &result),
-                Err(TryRecvError::Empty) => waiting.push((account, opening, job)),
+                // (Kept only while the sign-in it went with is still the account's own.)
+                Ok(result) if self.graph_job_holds(account, signer.as_ref()) => self.keep_inbox_tokens(account, &result),
+                Ok(_) => {}
+                Err(TryRecvError::Empty) => waiting.push((account, opening, signer, job)),
                 Err(TryRecvError::Disconnected) => {}
             }
         }
@@ -275,7 +284,8 @@ impl MailApp {
     fn keep_inbox_tokens(&mut self, account: Id, result: &GraphResult) {
         let owner = self.session.mailbox.owner_of(account).map(|o| o.id);
         if result.token_refused {
-            self.graph_tokens.remove(&account);
+            // (A shared mailbox's stamp with it.)
+            self.drop_shared_mail_token(account);
         }
         // (A shared mailbox's sign-in is its owner's: checked against the owner, AU3-10.)
         let owner = owner.unwrap_or(account);
@@ -288,8 +298,13 @@ impl MailApp {
                     kept.refresh = tokens.refresh.clone();
                 }
             }
-            let now = mailcraft_time::now();
-            self.graph_tokens.insert(account, Tokens { expires_at: tokens.expires_at.clamp(now, now.saturating_add(86_400)), ..tokens });
+            // (A shared mailbox's is stamped with its owner's sign-in: used for no other.)
+            if self.session.mailbox.account(account).is_some_and(|a| a.is_shared()) {
+                self.keep_shared_mail_token(account, tokens);
+            } else {
+                let now = mailcraft_time::now();
+                self.graph_tokens.insert(account, Tokens { expires_at: tokens.expires_at.clamp(now, now.saturating_add(86_400)), ..tokens });
+            }
         }
     }
 

@@ -1069,7 +1069,14 @@ fn folder(app: &MailApp) -> Tab {
     // (As the folder pane lists it: by Outlook's own list where an account has one.)
     let favorite = mailcraft_engine::cmd::folder::favorites(&app.session).contains(&app.session.view.folder);
     Tab::of(vec![
-        g("New", vec![Item::big("folderNew", "New\nFolder", "folder.new", no()).at(0, 1)]),
+        g(
+            "New",
+            vec![
+                Item::big("folderNew", "New\nFolder", "folder.new", no()).at(0, 1),
+                // (Greyed where no account can have one: the command's own rule, #70.)
+                Item::big("account", "Add Shared\nMailbox", "account.addSharedMailbox", no()).at(0, 3),
+            ],
+        ),
         g(
             "Actions",
             vec![

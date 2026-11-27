@@ -254,3 +254,10 @@ path = "fuzz_targets/signature_html.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "graph_directory"
+path = "fuzz_targets/graph_directory.rs"
+test = false
+doc = false
+bench = false

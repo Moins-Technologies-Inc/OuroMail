@@ -112,7 +112,7 @@ fn the_phones_page_asks_for_the_shared_mailboxes_it_reads_and_nothing_it_keeps_n
 }
 
 #[test]
-fn one_approval_is_exactly_what_the_pages_ask_and_the_favorites() {
+fn one_approval_is_exactly_what_the_pages_ask_the_favorites_and_the_directory() {
     let mut asked = BTreeSet::new();
     for resource in [Resource::Mail, Resource::Graph, Resource::GraphMail] {
         for page in [Endpoints::for_resource(&oauth(), resource), Endpoints::for_resource_without_sync(&oauth(), resource)] {
@@ -124,6 +124,8 @@ fn one_approval_is_exactly_what_the_pages_ask_and_the_favorites() {
         asked.extend(words(&format!("{} {}", page.scope, page.consent)));
     }
     asked.extend(FAVORITES.iter().map(|p| p.to_string()));
+    // And the directory's, asked for by itself too: its page and its token (Add Shared Mailbox).
+    asked.extend(words(&format!("{} {}", directory_endpoints(&oauth()).scope, directory_scope())));
     assert_eq!(words(&admin_scope()), asked);
 }
 
