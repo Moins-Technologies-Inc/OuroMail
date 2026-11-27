@@ -17,7 +17,9 @@
 //! The one-time move of secrets filed under their old names to the names bound to servers
 //! (`ui.sign_ins_bound`) is done by the same thread, since it too reads the store.
 
-use std::sync::mpsc;
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, PoisonError, mpsc};
 
 use serde_json::Value;
 
@@ -36,6 +38,48 @@ pub(crate) struct SecretRead {
     pub(crate) trouble: Option<StoreTrouble>,
 }
 
+/// The names let go of in the store while a read is under way, shared with the reading thread so
+/// that its move from an old name never writes one of them back (a tenant edit, a change of the
+/// installation's application id or Remove all data can land while the store keeps the read
+/// waiting, R3-1); and whether every name is let go of (the data was removed, or another
+/// mailbox took the place of the one it reads for).
+#[derive(Default)]
+pub(crate) struct LetGo {
+    names: Mutex<HashSet<String>>,
+    all: AtomicBool,
+    /// The names let go of that a sign-in was remembered under again since: the window's
+    /// alone, written back once the read is over (MFU-S2).
+    again: Mutex<HashSet<String>>,
+}
+
+impl LetGo {
+    /// `key` is let go of. (Noted before it is deleted from the store, and the reader looks again
+    /// once it has written: whichever comes second sees the other.)
+    pub(crate) fn note(&self, key: &str) {
+        self.names.lock().unwrap_or_else(PoisonError::into_inner).insert(key.to_string());
+        self.again.lock().unwrap_or_else(PoisonError::into_inner).remove(key);
+    }
+
+    /// A sign-in is remembered under `key` now: when `key` was let go of, it is the new one's.
+    pub(crate) fn remembered_again(&self, key: &str) {
+        let let_go = self.names.lock().unwrap_or_else(PoisonError::into_inner).contains(key);
+        if let_go {
+            self.again.lock().unwrap_or_else(PoisonError::into_inner).insert(key.to_string());
+        }
+    }
+
+    /// Every name is let go of: the data was removed, or another mailbox took the place of the
+    /// one the read is for.
+    pub(crate) fn everything(&self) {
+        self.all.store(true, Ordering::SeqCst);
+    }
+
+    /// Whether `key` is let go of.
+    pub(crate) fn has(&self, key: &str) -> bool {
+        self.all.load(Ordering::SeqCst) || self.names.lock().unwrap_or_else(PoisonError::into_inner).contains(key)
+    }
+}
+
 /// One key to read, and the old name to move a secret from first.
 struct Ask {
     key: String,
@@ -43,14 +87,23 @@ struct Ask {
 }
 
 /// The reading itself; runs on a thread of its own, and may wait on the store for a long time.
-fn read(store: &dyn SecretStore, asks: Vec<Ask>, migrated: bool) -> SecretRead {
+fn read(store: &dyn SecretStore, asks: Vec<Ask>, migrated: bool, let_go: &LetGo) -> SecretRead {
     let (mut answers, mut moved) = (Vec::new(), Vec::new());
     for Ask { key, old } in asks {
         if let Some(old) = old
             && let Some(secret) = store.get(&old).filter(|s| !s.is_empty())
         {
+            // (Let go of while the store kept this read waiting: not written again.)
+            if let_go.has(&key) {
+                continue;
+            }
             match store.set(&key, &secret) {
                 Ok(()) => {
+                    // Let go of while it was being written: deleted again before anyone reads it.
+                    if let_go.has(&key) {
+                        store.delete(&key);
+                        continue;
+                    }
                     store.delete(&old);
                     moved.push(key.clone());
                 }
@@ -104,12 +157,14 @@ impl MailApp {
             .take(mailcraft_model::subscription::MAX_SUBSCRIBED);
         asks.extend(subscribed.map(|(id, sub)| Ask { key: sub.secret_name(id), old: None }));
         let (send, receive) = mpsc::channel();
+        let let_go = Arc::new(LetGo::default());
+        let told = Arc::clone(&let_go);
         let job = std::thread::Builder::new().name("secret-read".into()).spawn(move || {
-            let _ = send.send(read(&*store, asks, migrate));
+            let _ = send.send(read(&*store, asks, migrate, &told));
         });
         match job {
             Ok(_) => {
-                self.secrets_let_go.clear();
+                self.secrets_let_go = let_go;
                 self.secret_read = Some((self.session.openings(), receive));
             }
             Err(e) => log::warn!("couldn't start reading the credential store: {e}"),
@@ -146,10 +201,19 @@ impl MailApp {
         // What was let go of while it ran is not taken back from it (a sign-in changed, an account
         // went); and once the data is removed, nothing is.
         let let_go = std::mem::take(&mut self.secrets_let_go);
+        // What it moved to a name let go of meanwhile (to any, once the data is removed) is
+        // deleted again: the move may have written it after the name was let go of (R3-1).
+        if let Some(brought) = &brought {
+            self.forget_moved_again(&brought.moved, &let_go);
+        }
         if self.data_removed {
             self.sync_after_secrets.clear();
             return;
         }
+        // A sign-in remembered again under a name let go of while it ran is the owner's new one:
+        // the read's clean-up (the reader's delete of its own write, or the one above) may have
+        // taken it out of the store, so it is written back (MFU-S2).
+        self.keep_remembered_again(&let_go);
         // A mailbox took the place of the one it was started for: its accounts are not these.
         if opening == self.session.openings()
             && let Some(brought) = brought
@@ -159,7 +223,7 @@ impl MailApp {
             // settings give that name any more.)
             let dav_now: std::collections::HashSet<String> = self.session.mailbox.accounts.iter().flat_map(Self::dav_secret_keys).collect();
             for (key, secret) in brought.answers {
-                let stale = (key.starts_with(mailcraft_host::secrets::DAV_PASSWORD) && !dav_now.contains(&key)) || let_go.contains(&key);
+                let stale = (key.starts_with(mailcraft_host::secrets::DAV_PASSWORD) && !dav_now.contains(&key)) || let_go.has(&key);
                 if let Some(secret) = secret.filter(|_| !stale) {
                     // Noted, as one written here is, so that Remove all data finds it whichever
                     // mailbox is open then (AU3-18).
@@ -167,7 +231,7 @@ impl MailApp {
                     self.secret_cache.insert(key, secret);
                 }
             }
-            for key in brought.moved {
+            for key in brought.moved.into_iter().filter(|key| !let_go.has(key)) {
                 self.index_secret_key(key);
             }
             if brought.migrated {
@@ -184,6 +248,31 @@ impl MailApp {
             }
             if let Err(e) = self.start_sync(&p) {
                 self.status(e);
+            }
+        }
+    }
+
+    /// Delete from the store again what a read moved to a name let go of while it ran. (Not noted
+    /// either: the name is not the account's any more, or the data is gone.)
+    fn forget_moved_again(&self, moved: &[String], let_go: &LetGo) {
+        let Some(store) = &self.services.secrets else { return };
+        for key in moved.iter().filter(|key| let_go.has(key)) {
+            store.delete(key);
+        }
+    }
+
+    /// Write back to the store what was remembered again under a name let go of while a read ran,
+    /// as memory has it (nothing when it was let go of again since).
+    fn keep_remembered_again(&mut self, let_go: &LetGo) {
+        let Some(store) = self.services.secrets.clone() else { return };
+        for key in let_go.again.lock().unwrap_or_else(PoisonError::into_inner).iter() {
+            let Some(secret) = self.secret_cache.get(key) else { continue };
+            if store.set(key, secret).is_err() {
+                // (As `remember` does: a store error can echo its input, and a partial write
+                // must not look kept.)
+                log::warn!("couldn't keep a sign-in in the operating system's credential store");
+                store.delete(key);
+                self.secret_cache.remove(key);
             }
         }
     }

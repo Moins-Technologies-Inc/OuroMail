@@ -1089,3 +1089,11 @@ mod integration_r3_tests;
 #[cfg(test)]
 #[path = "shared_integration_r3b_tests.rs"]
 mod integration_r3b_tests;
+
+#[cfg(test)]
+#[path = "shared_integration_followup_tests.rs"]
+mod integration_followup_tests;
+
+#[cfg(test)]
+#[path = "shared_integration_followup_b_tests.rs"]
+mod integration_followup_b_tests;

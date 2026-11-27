@@ -25085,6 +25085,13 @@ msgstr "Microsoft už vaše přihlášení nepřijímá."
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgctxt "why automatic replies weren't changed"
+msgid "another account's change was waiting, so make the change for {address} again (File › Info › Automatic Replies)."
+msgstr "změna jiného účtu čekala na odeslání, proto změnu pro {address} proveďte znovu (Soubor › Informace › Automatické odpovědi)."
+
+#. interface
+#: crates/ui-egui/src/auto_replies.rs
+#, fuzzy
+msgctxt "why automatic replies weren't changed"
 msgid "sign in again to let MailCraft read them (File › Info)."
 msgstr "přihlaste se znovu, aby je MailCraft mohl načíst (Soubor › Informace)."
 

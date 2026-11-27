@@ -25024,6 +25024,13 @@ msgstr "A Microsoft már nem veszi fel a jelentkezését."
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgctxt "why automatic replies weren't changed"
+msgid "another account's change was waiting, so make the change for {address} again (File › Info › Automatic Replies)."
+msgstr "egy másik fiók módosítása várakozott, ezért végezze el újra a(z) {address} módosítását (File › Info › Automatikus válasz)."
+
+#. interface
+#: crates/ui-egui/src/auto_replies.rs
+#, fuzzy
+msgctxt "why automatic replies weren't changed"
 msgid "sign in again to let MailCraft read them (File › Info)."
 msgstr "Írja be újra, hogy MailCraft olvassa el őket (Aktivált › Info)."
 

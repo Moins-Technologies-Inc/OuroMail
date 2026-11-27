@@ -25029,6 +25029,13 @@ msgstr "Microsoft ya no acepta su inicio de sesión."
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgctxt "why automatic replies weren't changed"
+msgid "another account's change was waiting, so make the change for {address} again (File › Info › Automatic Replies)."
+msgstr "esperaba el cambio de otra cuenta, así que vuelva a hacer el cambio para {address} (Archivo › Información › Respuestas automáticas)."
+
+#. interface
+#: crates/ui-egui/src/auto_replies.rs
+#, fuzzy
+msgctxt "why automatic replies weren't changed"
 msgid "sign in again to let MailCraft read them (File › Info)."
 msgstr "inicie sesión de nuevo para que MailCraft las lea (Archivo › Información)."
 

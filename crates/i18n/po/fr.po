@@ -24932,6 +24932,13 @@ msgstr "Microsoft n'accepte plus votre connexion."
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgctxt "why automatic replies weren't changed"
+msgid "another account's change was waiting, so make the change for {address} again (File › Info › Automatic Replies)."
+msgstr "la modification d'un autre compte était en attente, refaites donc celle de {address} (Fichier › Info › Réponses automatiques)."
+
+#. interface
+#: crates/ui-egui/src/auto_replies.rs
+#, fuzzy
+msgctxt "why automatic replies weren't changed"
 msgid "sign in again to let MailCraft read them (File › Info)."
 msgstr "reconnectez-vous pour que MailCraft puisse les lire (Fichier › Info)."
 

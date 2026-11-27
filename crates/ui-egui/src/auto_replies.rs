@@ -131,6 +131,9 @@ pub(crate) enum Unchanged {
     Failed(String),
     /// Nothing more is known than that they weren't.
     Unknown,
+    /// Another account's change waited to go, and this one, of the account with this address,
+    /// can't wait beside it: the owner is to make it again.
+    Waiting(String),
 }
 
 impl Unchanged {
@@ -150,9 +153,22 @@ impl Unchanged {
             Unchanged::SignInOver => tlc!("why automatic replies weren't changed", "Microsoft no longer takes your sign-in."),
             Unchanged::Failed(why) => why.as_str(),
             Unchanged::Unknown => return heading.to_string(),
+            Unchanged::Waiting(address) => {
+                let reason = tlc!(
+                    "why automatic replies weren't changed",
+                    "another account's change was waiting, so make the change for {address} again (File › Info › Automatic Replies)."
+                );
+                return crate::i18n::with_reason(heading, &crate::i18n::fmt(reason, &[("address", address.as_str())]));
+            }
         };
         crate::i18n::with_reason(heading, reason)
     }
+}
+
+/// Whether `was` and `now` are one address under one login name (the sign-in itself may be
+/// another, a tenant's or an application id's).
+fn same_address_and_login(was: &Account, now: &Account) -> bool {
+    was.email == now.email && was.username == now.username
 }
 
 impl AutoRepliesSync {
@@ -314,6 +330,20 @@ impl MailApp {
         let signer = self.auto_replies.signer.take();
         if !self.graph_job_holds(account, signer.as_ref()) {
             log::info!("automatic replies: the account went or its sign-in changed while the job ran; let go of");
+            // A change the owner made goes again, with the sign-in there is now (setting them is
+            // the same however often it is done), when it goes to the address and under the login
+            // name it was made for; otherwise he is told it wasn't made (MFU-S3). Not one of an
+            // account that went.
+            if let Some(change) = change
+                && self.session.mailbox.account(account).is_some()
+            {
+                let now = self.job_signer(account);
+                if signer.as_ref().zip(now.as_ref()).is_some_and(|(was, now)| same_address_and_login(was, now)) {
+                    self.auto_replies_again(account, change);
+                } else {
+                    self.status(Unchanged::Unknown.said());
+                }
+            }
             return;
         }
         if let Some(tokens) = &result.tokens
@@ -379,6 +409,20 @@ impl MailApp {
             unchanged.said()
         };
         self.status(said);
+    }
+
+    /// A change of `account`'s replies whose job was let go of goes at the next look, unless a newer
+    /// one of the owner's for it waits already; when another account's change holds the one place
+    /// a change waits in, the owner is told this one wasn't made.
+    fn auto_replies_again(&mut self, account: Id, change: AutoReplies) {
+        match self.session.driver.auto_replies.waiting.as_ref().map(|(waiting, _)| *waiting) {
+            None => self.session.driver.auto_replies.waiting = Some((account, change)),
+            Some(waiting) if waiting == account => {}
+            Some(_) => {
+                let address = self.session.mailbox.account(account).map(|a| a.email.clone()).unwrap_or_default();
+                self.status(Unchanged::Waiting(address).said());
+            }
+        }
     }
 
     /// Forget everything about the mailbox that was open when another has taken its place: its

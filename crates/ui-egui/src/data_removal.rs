@@ -170,6 +170,8 @@ impl MailApp {
         }
         // Nothing writes any more: no Send/Receive, no mailbox file, nothing remembered.
         self.data_removed = true;
+        // A read of the store under way writes no name any more (R3-1).
+        self.secrets_let_go.everything();
         self.services.sync_cancel.store(true, std::sync::atomic::Ordering::Relaxed);
         self.session.driver.round.queue.clear();
         let mailbox = self.session.path.take();

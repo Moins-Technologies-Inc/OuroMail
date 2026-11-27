@@ -25117,6 +25117,13 @@ msgstr "Microsoft nie przyjmuje już Twojego logowania."
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgctxt "why automatic replies weren't changed"
+msgid "another account's change was waiting, so make the change for {address} again (File › Info › Automatic Replies)."
+msgstr "zmiana innego konta czekała na wysłanie, więc wprowadź zmianę dla {address} ponownie (Plik › Informacje › Odpowiedzi automatyczne)."
+
+#. interface
+#: crates/ui-egui/src/auto_replies.rs
+#, fuzzy
+msgctxt "why automatic replies weren't changed"
 msgid "sign in again to let MailCraft read them (File › Info)."
 msgstr "zaloguj się ponownie, aby MailCraft mógł je odczytać (Plik › Informacje)."
 

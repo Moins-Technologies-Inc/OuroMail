@@ -25002,6 +25002,13 @@ msgstr "Microsoft 不再接受您的登录凭据。"
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgctxt "why automatic replies weren't changed"
+msgid "another account's change was waiting, so make the change for {address} again (File › Info › Automatic Replies)."
+msgstr "另一个账户的更改正在等待，因此请重新为 {address} 进行更改（文件 › 信息 › 自动回复）。"
+
+#. interface
+#: crates/ui-egui/src/auto_replies.rs
+#, fuzzy
+msgctxt "why automatic replies weren't changed"
 msgid "sign in again to let MailCraft read them (File › Info)."
 msgstr "请重新登录，以便 MailCraft 读取自动回复（文件 › 信息）。"
 

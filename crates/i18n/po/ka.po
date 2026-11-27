@@ -24942,6 +24942,13 @@ msgstr "Microsoft თქვენს შესვლას აღარ იღ�
 #: crates/ui-egui/src/auto_replies.rs
 #, fuzzy
 msgctxt "why automatic replies weren't changed"
+msgid "another account's change was waiting, so make the change for {address} again (File › Info › Automatic Replies)."
+msgstr "სხვა ანგარიშის ცვლილება ელოდებოდა, ამიტომ {address}-ის ცვლილება ხელახლა გააკეთეთ (ფაილი › ინფორმაცია › ავტომატური პასუხები)."
+
+#. interface
+#: crates/ui-egui/src/auto_replies.rs
+#, fuzzy
+msgctxt "why automatic replies weren't changed"
 msgid "sign in again to let MailCraft read them (File › Info)."
 msgstr "ხელახლა შედით, რომ MailCraft-მა ისინი წაიკითხოს (ფაილი › ინფორმაცია)."
 

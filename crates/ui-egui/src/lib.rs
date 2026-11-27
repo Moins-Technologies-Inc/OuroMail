@@ -1763,8 +1763,9 @@ pub struct MailApp {
     /// The background read of the store under way, with the opening it was started for.
     secret_read: Option<(u64, std::sync::mpsc::Receiver<secret_read::SecretRead>)>,
     /// The names let go of in the credential store while that read was under way: what it brings
-    /// for them is the store as it was before, and is not taken ([`secret_read`]).
-    secrets_let_go: std::collections::HashSet<String>,
+    /// for them is the store as it was before, and is not taken; shared with the reading thread,
+    /// which writes none of them ([`secret_read`]).
+    secrets_let_go: std::sync::Arc<secret_read::LetGo>,
     /// The opening, and whether remembering was on, when the store was last read by itself.
     secrets_asked: Option<(u64, bool)>,
     /// Send/Receive the owner asked for, held until the store has answered.
@@ -3607,6 +3608,9 @@ impl MailApp {
         let Some(store) = &self.services.secrets else { return };
         match store.set(&key, secret) {
             Ok(()) => {
+                // (A name let go of while a read of the store is under way is the owner's new
+                // sign-in's now: the read's clean-up doesn't take it with it, MFU-S2.)
+                self.secrets_let_go.remembered_again(&key);
                 self.secret_cache.insert(key.clone(), secret.to_string());
                 self.index_secret_key(key);
             }
@@ -3694,7 +3698,7 @@ impl MailApp {
         let named = ["password", "refresh"].into_iter().flat_map(|kind| Self::secret_keys_of(kind, a)).chain(dav);
         for key in named {
             if self.secret_read.is_some() {
-                self.secrets_let_go.insert(key.clone());
+                self.secrets_let_go.note(&key);
             }
             store.delete(&key);
             if store.get(&key).is_none() {
@@ -3717,7 +3721,7 @@ impl MailApp {
         for key in &keys {
             self.secret_cache.remove(key);
             if self.secret_read.is_some() {
-                self.secrets_let_go.insert(key.clone());
+                self.secrets_let_go.note(key);
             }
         }
         let Some(store) = &self.services.secrets else { return };
@@ -4229,6 +4233,10 @@ impl MailApp {
             self.dav_passwords.clear();
             self.sync_password = None;
             self.secret_cache.clear();
+            // The read under way was for the mailbox that was open: it writes nothing any more
+            // (its move from the old names is done again at the next start, MFU-S1).
+            self.secrets_let_go.everything();
+            self.secrets_let_go = Default::default();
             self.secret_read = None;
             self.secrets_asked = None;
             self.sync_after_secrets.clear();
@@ -4542,7 +4550,7 @@ impl MailApp {
             &mut said,
         ) {
             self.session.mailbox_changed();
-            if !voided && let Some(first) = said.first() {
+            if let Some(first) = said.first() {
                 self.status(first.clone());
             }
         }
